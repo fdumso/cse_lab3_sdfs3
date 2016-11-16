@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="testCompile">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/libs/testCompile" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+    <jarDirectory url="file://$PROJECT_DIR$/libs/testCompile" recursive="false" />
+  </library>
+</component>

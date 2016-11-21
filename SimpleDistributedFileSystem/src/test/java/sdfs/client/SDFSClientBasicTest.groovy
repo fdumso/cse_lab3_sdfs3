@@ -1,7 +1,7 @@
 package sdfs.client
 
 import sdfs.datanode.DataNodeServer
-import sdfs.exception.SDFSFileAlreadyExistException
+import sdfs.exception.SDFSFileAlreadyExistsException
 import sdfs.namenode.NameNodeServer
 import sdfs.protocol.IDataNodeProtocol
 import sdfs.protocol.INameNodeDataNodeProtocol
@@ -59,25 +59,25 @@ class SDFSClientBasicTest extends Specification {
         client.mkdir("$parentDir/$dirName")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         client.mkdir("$parentDir/$filename")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         client.create("$parentDir/$dirName")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         client.create("$parentDir/$filename")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         client.openReadonly("$parentDir/${generateFilename()}")

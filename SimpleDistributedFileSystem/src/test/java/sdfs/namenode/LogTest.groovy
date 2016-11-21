@@ -1,7 +1,7 @@
 package sdfs.namenode
 
 import sdfs.datanode.DataNodeServer
-import sdfs.exception.SDFSFileAlreadyExistException
+import sdfs.exception.SDFSFileAlreadyExistsException
 import sdfs.protocol.INameNodeProtocol
 import spock.lang.Specification
 
@@ -67,13 +67,13 @@ class LogTest extends Specification {
         nameNodeServer3.mkdir("$parentDir/$dirName")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         nameNodeServer3.create("$parentDir/$filename")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         def fileNode = nameNodeServer3.openReadonly("$parentDir/$filename").fileNode
@@ -94,13 +94,13 @@ class LogTest extends Specification {
         nameNodeServer4.mkdir("$parentDir/$dirName")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         nameNodeServer4.create("$parentDir/$filename")
 
         then:
-        thrown(SDFSFileAlreadyExistException)
+        thrown(SDFSFileAlreadyExistsException)
 
         when:
         def fileNode3 = nameNodeServer4.openReadonly("$parentDir/$filename").fileNode

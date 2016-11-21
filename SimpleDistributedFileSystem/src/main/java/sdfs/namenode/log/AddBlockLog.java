@@ -1,7 +1,5 @@
 package sdfs.namenode.log;
 
-import sdfs.namenode.LocatedBlock;
-
 import java.util.UUID;
 
 /**

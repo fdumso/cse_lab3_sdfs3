@@ -1,8 +1,4 @@
-/*
- * Copyright (c) Jipzingking 2016.
- */
-
-package sdfs.namenode;
+package sdfs.filetree;
 
 import java.io.Serializable;
 import java.net.InetAddress;
@@ -12,7 +8,7 @@ public class LocatedBlock implements Serializable {
     private final InetAddress inetAddress;
     private final int blockNumber;
 
-    LocatedBlock(InetAddress inetAddress, int blockNumber) {
+    public LocatedBlock(InetAddress inetAddress, int blockNumber) {
         if (inetAddress == null) {
             throw new NullPointerException();
         }

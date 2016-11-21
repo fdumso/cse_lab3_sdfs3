@@ -2,8 +2,19 @@ package sdfs.filetree;
 
 import java.io.Serializable;
 
-/**
- * Created by pengcheng on 2016/11/15.
- */
-public interface Node extends Serializable{
+public abstract class Node implements Serializable {
+    private Type type;
+
+    public enum Type {
+        FILE, DIR
+        }
+
+    public Node(Type type) {
+        this.type = type;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
 }

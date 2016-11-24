@@ -5,24 +5,10 @@ import sdfs.exception.IllegalAccessTokenException;
 import java.io.Serializable;
 
 public class DataNodeResponse implements Serializable {
-    private Type type;
     private byte[] data;
 
     private IllegalArgumentException illegalArgumentException;
     private IllegalAccessTokenException illegalAccessTokenException;
-
-
-    public enum Type {
-        READ, WRITE
-    }
-
-    public DataNodeResponse(Type type) {
-        this.type = type;
-    }
-
-    public Type getType() {
-        return type;
-    }
 
     public byte[] getData() {
         return data;

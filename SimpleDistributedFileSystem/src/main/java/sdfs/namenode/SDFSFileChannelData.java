@@ -10,35 +10,23 @@ public class SDFSFileChannelData implements Serializable {
 
     private UUID token;
     private FileNode fileNode;
-    private long fileSize; //Size of this file
-    private int blockAmount; //Total block amount of this file
-    private AccessTokenPermission permission;
+    private boolean writable;
 
-    public SDFSFileChannelData(FileNode fileNode, long fileSize, int blockAmount, AccessTokenPermission permission, UUID token) {
+    public SDFSFileChannelData(FileNode fileNode, boolean writable, UUID token) {
         this.token = token;
         this.fileNode = fileNode;
-        this.fileSize = fileSize;
-        this.blockAmount = blockAmount;
-        this.permission = permission;
+        this.writable = writable;
     }
 
     public UUID getToken() {
         return token;
     }
 
-    public AccessTokenPermission getPermission() {
-        return permission;
+    public boolean isWritable() {
+        return writable;
     }
 
     public FileNode getFileNode() {
         return fileNode;
-    }
-
-    public long getFileSize() {
-        return fileSize;
-    }
-
-    public int getBlockAmount() {
-        return blockAmount;
     }
 }

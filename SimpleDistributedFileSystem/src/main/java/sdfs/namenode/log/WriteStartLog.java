@@ -2,16 +2,13 @@ package sdfs.namenode.log;
 
 import java.util.UUID;
 
-/**
- * Created by pengcheng on 2016/11/15.
- */
 public class WriteStartLog implements Log {
     private String fileUri;
-    private UUID fileAccessToken;
+    private UUID token;
 
-    public WriteStartLog(String fileUri, UUID fileAccessToken) {
+    public WriteStartLog(String fileUri, UUID token) {
         this.fileUri = fileUri;
-        this.fileAccessToken = fileAccessToken;
+        this.token = token;
     }
 
     public String getFileUri() {
@@ -22,11 +19,11 @@ public class WriteStartLog implements Log {
         this.fileUri = fileUri;
     }
 
-    public UUID getFileAccessToken() {
-        return fileAccessToken;
+    public UUID getToken() {
+        return token;
     }
 
-    public void setFileAccessToken(UUID fileAccessToken) {
-        this.fileAccessToken = fileAccessToken;
+    public void setToken(UUID token) {
+        this.token = token;
     }
 }

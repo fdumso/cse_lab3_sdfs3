@@ -2,6 +2,7 @@ package sdfs.namenode;
 
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.exception.SDFSFileAlreadyExistsException;
+import sdfs.filetree.LocatedBlock;
 import sdfs.packet.NameNodeRequest;
 import sdfs.packet.NameNodeResponse;
 import sdfs.protocol.INameNodeProtocol;
@@ -12,9 +13,11 @@ import java.net.Socket;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-public class NameNodeServer {
+public class NameNodeServer implements Runnable {
+    public static final int FLUSH_DISK_INTERNAL_SECONDS = 60*1000;
 
     private NameNode nameNode;
     private ServerSocket serverSocket;
@@ -22,21 +25,27 @@ public class NameNodeServer {
     public NameNodeServer(long flushDiskInternalSeconds) {
         this.nameNode = new NameNode(flushDiskInternalSeconds);
 
-
         try {
             this.serverSocket = new ServerSocket(INameNodeProtocol.NAME_NODE_PORT);
         } catch (IOException e) {
             System.err.println("Socket error!");
             e.printStackTrace();
         }
-
-
     }
 
-    public void start() throws IOException {
-        System.out.println("Server started!\nWaiting for request...");
+    public NameNode getNameNode() {
+        return nameNode;
+    }
+
+    @Override
+    public void run() {
         while (true) {
-            Socket socketWithClient = serverSocket.accept();
+            Socket socketWithClient = null;
+            try {
+                socketWithClient = serverSocket.accept();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             new Thread(new ClientHandler(socketWithClient)).start();
         }
     }
@@ -77,6 +86,8 @@ public class NameNodeServer {
                             break;
                         case NEW_COW_BLOCK: response = handleNewCOWBlock(request);
                             break;
+                        case GET_ACCESS_TOKEN_PERMISSION: response = handleGetOriginalPermission(request);
+                            break;
                         default: // ignore this request
                             return;
                     }
@@ -92,52 +103,70 @@ public class NameNodeServer {
 
         }
 
+        private NameNodeResponse handleGetOriginalPermission(NameNodeRequest request) {
+            NameNodeResponse response = new NameNodeResponse();
+            UUID token = request.getToken();
+            AccessTokenPermission accessTokenPermission = nameNode.getAccessTokenPermission(token);
+            response.setAccessTokenPermission(accessTokenPermission);
+            return response;
+        }
 
 
         NameNodeResponse handleOpenReadOnly(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.OPEN_READ_ONLY);
+            NameNodeResponse response = new NameNodeResponse();
             String fileUri = request.getString();
             try {
                 SDFSFileChannelData sdfsFileChannelData = nameNode.openReadonly(fileUri);
                 response.setSDFSFileChannelData(sdfsFileChannelData);
             } catch (FileNotFoundException e) {
                 response.setFileNotFoundException(new FileNotFoundException());
-                e.printStackTrace();
             }
             return response;
         }
 
         NameNodeResponse handleOpenReadWrite(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.OPEN_READ_WRITE);
+            NameNodeResponse response = new NameNodeResponse();
             String fileUri = request.getString();
             try {
                 SDFSFileChannelData sdfsFileChannelData = nameNode.openReadwrite(fileUri);
                 response.setSDFSFileChannelData(sdfsFileChannelData);
             } catch (FileNotFoundException e) {
                 response.setFileNotFoundException(new FileNotFoundException());
-                e.printStackTrace();
             } catch (OverlappingFileLockException e) {
                 response.setOverlappingFileLockException(new OverlappingFileLockException());
-                e.printStackTrace();
             }
             return response;
         }
 
         NameNodeResponse handleCreate(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.CREATE);
+            NameNodeResponse response = new NameNodeResponse();
             String fileUri = request.getString();
             try {
                 SDFSFileChannelData sdfsFileChannelData = nameNode.create(fileUri);
                 response.setSDFSFileChannelData(sdfsFileChannelData);
             } catch (SDFSFileAlreadyExistsException e) {
                 response.setSDFSFileAlreadyExistException(new SDFSFileAlreadyExistsException());
-                e.printStackTrace();
+            } catch (FileNotFoundException e) {
+                response.setFileNotFoundException(new FileNotFoundException());
+            }
+            return response;
+        }
+
+        NameNodeResponse handleMkdir(NameNodeRequest request) {
+            NameNodeResponse response = new NameNodeResponse();
+            String fileUri = request.getString();
+            try {
+                nameNode.mkdir(fileUri);
+            } catch (SDFSFileAlreadyExistsException e) {
+                response.setSDFSFileAlreadyExistException(new SDFSFileAlreadyExistsException());
+            } catch (FileNotFoundException e) {
+                response.setFileNotFoundException(new FileNotFoundException());
             }
             return response;
         }
 
         NameNodeResponse handleCloseReadOnly(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.CLOSE_READ_ONLY);
+            NameNodeResponse response = new NameNodeResponse();
             UUID token = request.getToken();
             try {
                 nameNode.closeReadonlyFile(token);
@@ -148,7 +177,7 @@ public class NameNodeServer {
         }
 
         NameNodeResponse handleCloseReadWrite(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.CLOSE_READ_WRITE);
+            NameNodeResponse response = new NameNodeResponse();
             UUID token = request.getToken();
             long newFileSize = request.getNumber();
             try {
@@ -161,19 +190,8 @@ public class NameNodeServer {
             return response;
         }
 
-        NameNodeResponse handleMkdir(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.MK_DIR);
-            String fileUri = request.getString();
-            try {
-                nameNode.mkdir(fileUri);
-            } catch (SDFSFileAlreadyExistsException e) {
-                response.setSDFSFileAlreadyExistException(new SDFSFileAlreadyExistsException());
-            }
-            return response;
-        }
-
         NameNodeResponse handleAddBlocks(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.ADD_BLOCKS);
+            NameNodeResponse response = new NameNodeResponse();
             UUID token = request.getToken();
             int blockAmount = (int) request.getNumber(); // cast long to integer
             try {
@@ -186,7 +204,7 @@ public class NameNodeServer {
         }
 
         NameNodeResponse handleRemoveLastBlocks(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.REMOVE_LAST_BLOCKS);
+            NameNodeResponse response = new NameNodeResponse();
             UUID token = request.getToken();
             int blockAmount = (int) request.getNumber(); // cast long to integer
             try {
@@ -200,7 +218,7 @@ public class NameNodeServer {
         }
 
         private NameNodeResponse handleNewCOWBlock(NameNodeRequest request) {
-            NameNodeResponse response = new NameNodeResponse(NameNodeResponse.Type.NEW_COW_BLOCK);
+            NameNodeResponse response = new NameNodeResponse();
             UUID token = request.getToken();
             int fileBlockNumber = (int) request.getNumber(); // cast long to integer
             try {

@@ -23,21 +23,39 @@ public class CacheSystem {
         this.pointer = 0;
     }
 
+    public void flush() {
+        for (CachedBlock cachedBlock :
+                cachedBlockList) {
+            if (cachedBlock != null && cachedBlock.dirty) {
+                writeToServer(cachedBlock);
+            }
+        }
+    }
+
     public boolean isDirty(int blockNumber) {
         for (CachedBlock cachedBlock :
                 cachedBlockList) {
-            if (cachedBlock != null && blockNumber == cachedBlock.blockNumber) {
+            if (cachedBlock != null && blockNumber == cachedBlock.blockIndex) {
                 return cachedBlock.dirty;
             }
         }
         return false;
     }
 
+    public void removeCachedBlock(int blockNumber) {
+        for (int i = 0; i < cachedBlockList.length; i++) {
+            CachedBlock cachedBlock = cachedBlockList[i];
+            if (cachedBlock != null && blockNumber == cachedBlock.blockIndex) {
+                remove(i);
+            }
+        }
+    }
+
     public byte[] read(int blockNumber) {
         // search in cache
         for (CachedBlock cachedBlock :
                 cachedBlockList) {
-            if (cachedBlock != null && blockNumber == cachedBlock.blockNumber) {
+            if (cachedBlock != null && blockNumber == cachedBlock.blockIndex) {
                 // set used
                 touchBlock(cachedBlock, false);
                 return cachedBlock.data;
@@ -49,20 +67,35 @@ public class CacheSystem {
         return read(blockNumber);
     }
 
-    public void write(int blockNumber, LocatedBlock locatedBlock, byte[] data) {
+    public void writeNew(int blockNumber, LocatedBlock locatedBlock, byte[] data) {
         for (CachedBlock cachedBlock :
                 cachedBlockList) {
-            if (cachedBlock != null && blockNumber == cachedBlock.blockNumber) {
+            if (cachedBlock != null && blockNumber == cachedBlock.blockIndex) {
                 // set used
                 touchBlock(cachedBlock, true);
                 cachedBlock.setData(data);
                 cachedBlock.setLocatedBlock(locatedBlock);
+                return;
             }
         }
+        // not been cached, create a new cache
+        addToCache(locatedBlock, blockNumber, data, true);
     }
 
-    private void next() {
-        pointer = (pointer+1)%cacheSize;
+    public void write(int blockNumber, byte[] data) {
+        for (CachedBlock cachedBlock :
+                cachedBlockList) {
+            if (cachedBlock != null && blockNumber == cachedBlock.blockIndex) {
+                // set used
+                touchBlock(cachedBlock, true);
+                cachedBlock.setData(data);
+                return;
+            }
+        }
+        // not been cached, read from server
+        readFromServer(blockNumber);
+        // try again
+        write(blockNumber, data);
     }
 
     private void touchBlock(CachedBlock cachedBlock, boolean changed) {
@@ -72,18 +105,40 @@ public class CacheSystem {
         }
     }
 
-    private void removeCachedBlock(int index) {
+    private void remove(int index) {
         CachedBlock cachedBlock = cachedBlockList[index];
         if (cachedBlock.dirty) {
             writeToServer(cachedBlock);
         }
+        cachedBlockList[index] = null;
     }
 
-    private void writeToServer(CachedBlock cachedBlock) {
-        byte[] data = cachedBlock.data;
-        LocatedBlock locatedBlock = cachedBlock.locatedBlock;
-        DataNodeStub dataNodeStub = new DataNodeStub(locatedBlock.getInetAddress());
-        dataNodeStub.write(token, locatedBlock.getBlockNumber(), 0, data);
+    private void next() {
+        pointer = (pointer+1)%cacheSize;
+    }
+
+    private void addToCache(LocatedBlock locatedBlock, int blockNumber, byte[] data, boolean dirty) {
+        CachedBlock cachedBlock = new CachedBlock(locatedBlock, blockNumber, data);
+        if (dirty) {
+            cachedBlock.setDirty();
+        }
+
+        for (int i = 0; i < cachedBlockList.length; i++) {
+            if (cachedBlockList[i] == null) {
+                cachedBlockList[i] = cachedBlock;
+                return;
+            }
+        }
+
+        CachedBlock current = cachedBlockList[pointer];
+        if (!current.isOne()) {
+            remove(pointer);
+        } else {
+            current.setZero();
+        }
+        next();
+
+        addToCache(locatedBlock, blockNumber, data, dirty);
     }
 
     private void readFromServer(int blockNumber) throws IllegalArgumentException, IllegalAccessTokenException {
@@ -92,38 +147,29 @@ public class CacheSystem {
         DataNodeStub dataNodeStub = new DataNodeStub(locatedBlock.getInetAddress());
         byte[] data = dataNodeStub.read(token, locatedBlock.getBlockNumber(), 0, IDataNodeProtocol.BLOCK_SIZE);
         // add to cache
-        CachedBlock cachedBlock = new CachedBlock(locatedBlock, blockNumber, data);
-        if (cachedBlockList[pointer] == null) {
-            cachedBlockList[pointer] = cachedBlock;
-            next();
-        } else {
-            while (true) {
-                CachedBlock current = cachedBlockList[pointer];
-                if (!current.isOne()) {
-                    removeCachedBlock(pointer);
-                    cachedBlockList[pointer] = cachedBlock;
-                    next();
-                    return;
-                } else {
-                    current.setZero();
-                    next();
-                }
-            }
-        }
+        addToCache(locatedBlock, blockNumber, data, false);
+    }
+
+    private void writeToServer(CachedBlock cachedBlock) {
+        byte[] data = cachedBlock.data;
+        LocatedBlock locatedBlock = cachedBlock.locatedBlock;
+        DataNodeStub dataNodeStub = new DataNodeStub(locatedBlock.getInetAddress());
+        dataNodeStub.write(token, locatedBlock.getBlockNumber(), 0, data);
+        cachedBlock.clean();
     }
 
 
     class CachedBlock {
         private LocatedBlock locatedBlock;
-        private int blockNumber;
+        private int blockIndex;
         private byte[] data;
         private boolean flag;
         private boolean dirty;
 
-        public CachedBlock(LocatedBlock locatedBlock, int blockNumber, byte[] data) {
+        public CachedBlock(LocatedBlock locatedBlock, int blockIndex, byte[] data) {
             this.locatedBlock = locatedBlock;
             this.data = data;
-            this.blockNumber = blockNumber;
+            this.blockIndex = blockIndex;
             this.flag = true;
             this.dirty = false;
         }
@@ -132,8 +178,8 @@ public class CacheSystem {
             return locatedBlock;
         }
 
-        public int getBlockNumber() {
-            return blockNumber;
+        public int getBlockIndex() {
+            return blockIndex;
         }
 
         public void setData(byte[] data) {
@@ -166,6 +212,10 @@ public class CacheSystem {
 
         public void setZero() {
             this.flag = false;
+        }
+
+        public void clean() {
+            dirty = false;
         }
     }
 }

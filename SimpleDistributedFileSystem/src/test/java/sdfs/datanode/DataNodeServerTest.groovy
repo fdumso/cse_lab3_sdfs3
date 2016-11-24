@@ -1,29 +1,21 @@
 package sdfs.datanode
 
 import sdfs.exception.IllegalAccessTokenException
+import sdfs.namenode.NameNode
 import sdfs.namenode.NameNodeServer
 import sdfs.protocol.IDataNodeProtocol
-import sdfs.protocol.INameNodeDataNodeProtocol
-import sdfs.protocol.INameNodeProtocol
 import spock.lang.Shared
 import spock.lang.Specification
 
-import java.rmi.registry.LocateRegistry
-import java.rmi.registry.Registry
-import java.rmi.server.UnicastRemoteObject
-
 import static sdfs.Util.generateFilename
-import static sdfs.Util.generatePort
 
 class DataNodeServerTest extends Specification {
-    public static final int POSITION = DataNodeServer.BLOCK_SIZE >> 2
-    public static final int BUFFER_SIZE = DataNodeServer.BLOCK_SIZE >> 1
+    public static final int POSITION = IDataNodeProtocol.BLOCK_SIZE >> 2
+    public static final int BUFFER_SIZE = IDataNodeProtocol.BLOCK_SIZE >> 1
     @Shared
-    Registry registry
+    NameNode nameNode
     @Shared
-    INameNodeProtocol nameNodeServer
-    @Shared
-    IDataNodeProtocol dataNodeServer
+    DataNode dataNode
     @Shared
     def dataBuffer = new byte[BUFFER_SIZE]
     def parentDir = generateFilename()
@@ -31,208 +23,198 @@ class DataNodeServerTest extends Specification {
     int blockNumber
 
     def setupSpec() {
-        System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath);
-        System.setProperty("sdfs.datanode.dir", File.createTempDir().absolutePath);
-        registry = LocateRegistry.createRegistry(generatePort())
-        nameNodeServer = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS, registry)
-        def nameNodeRemote = UnicastRemoteObject.exportObject(nameNodeServer, 0)
-        dataNodeServer = new DataNodeServer(nameNodeRemote as INameNodeDataNodeProtocol)
+        System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath)
+        System.setProperty("sdfs.datanode.dir", File.createTempDir().absolutePath)
+        NameNodeServer nameNodeServer = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
+        DataNodeServer dataNodeServer = new DataNodeServer()
+        nameNode = nameNodeServer.nameNode
+        dataNode = dataNodeServer.dataNode
+        new Thread(nameNodeServer).start()
+        new Thread(dataNodeServer).start()
         for (int i = 0; i < BUFFER_SIZE; i++)
             dataBuffer[i] = i
     }
 
-    def cleanupSpec() {
-        registry.unbind(DataNodeServer.class.name)
-        UnicastRemoteObject.unexportObject(nameNodeServer, false)
-        UnicastRemoteObject.unexportObject(dataNodeServer, false)
-    }
-
     def setup() {
-        nameNodeServer.mkdir(parentDir)
+        nameNode.mkdir(parentDir)
     }
 
     private def writeData() {
-        def accessToken = nameNodeServer.create(filename).accessToken
-        blockNumber = nameNodeServer.addBlocks(accessToken, 1)[0].dataBlockNumber
-        dataNodeServer.write(accessToken, blockNumber, POSITION, dataBuffer)
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
+        def accessToken = nameNode.create(filename).token
+        blockNumber = nameNode.addBlocks(accessToken, 1)[0].blockNumber
+        dataNode.write(accessToken, blockNumber, POSITION, dataBuffer)
+        nameNode.closeReadwriteFile(accessToken, POSITION + BUFFER_SIZE)
     }
 
     def "Read"() {
         writeData()
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-        def accessToken = nameNodeServer.openReadwrite(filename).accessToken
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        def accessToken = nameNode.openReadwrite(filename).token
 
-        def tempAccessToken = nameNodeServer.create(generateFilename()).accessToken
-        def tempBlockNumber = nameNodeServer.addBlocks(tempAccessToken, 1)[0].dataBlockNumber
-
+        // 无效的token
         when:
-        def b = dataNodeServer.read(tempAccessToken, tempBlockNumber, 0, DataNodeServer.BLOCK_SIZE)
-
-        then:
-        b.size() == DataNodeServer.BLOCK_SIZE
-        b.every({ it == 0.byteValue() })
-
-        when:
-        dataNodeServer.read(UUID.randomUUID(), blockNumber, 0, 1)
+        dataNode.read(UUID.randomUUID(), blockNumber, 0, 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 无权访问该blockNumber，或者该blockNumber不存在
         when:
-        dataNodeServer.read(readonlyAccessToken, blockNumber + 1, 0, 1)
+        dataNode.read(readonlyAccessToken, blockNumber + 1, 0, 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 无权访问该blockNumber，或者该blockNumber不存在
         when:
-        dataNodeServer.read(readonlyAccessToken, -1, 0, 1)
+        dataNode.read(readonlyAccessToken, -1, 0, 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 读取范围越界
         when:
-        dataNodeServer.read(readonlyAccessToken, blockNumber, DataNodeServer.BLOCK_SIZE, 1)
+        dataNode.read(readonlyAccessToken, blockNumber, IDataNodeProtocol.BLOCK_SIZE, 1)
 
         then:
         thrown(IllegalArgumentException)
-
+        // 读取范围越界
         when:
-        dataNodeServer.read(readonlyAccessToken, blockNumber, 0, DataNodeServer.BLOCK_SIZE + 1)
+        dataNode.read(readonlyAccessToken, blockNumber, 0, IDataNodeProtocol.BLOCK_SIZE + 1)
 
         then:
         thrown(IllegalArgumentException)
-        dataNodeServer.read(readonlyAccessToken, blockNumber, POSITION, BUFFER_SIZE) == dataBuffer
-        dataNodeServer.read(accessToken, blockNumber, POSITION, BUFFER_SIZE) == dataBuffer
+        // 上述操作对之前写入的数据应该没有影响
+        dataNode.read(readonlyAccessToken, blockNumber, POSITION, BUFFER_SIZE) == dataBuffer
+        dataNode.read(accessToken, blockNumber, POSITION, BUFFER_SIZE) == dataBuffer
     }
 
     def "Write"() {
-        def accessToken = nameNodeServer.create(filename).accessToken
-        def blockNumber = nameNodeServer.addBlocks(accessToken, 1)[0].dataBlockNumber
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-
+        def accessToken = nameNode.create(filename).token
+        def blockNumber = nameNode.addBlocks(accessToken, 1)[0].blockNumber
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        // 无效的token
         when:
-        dataNodeServer.write(UUID.randomUUID(), blockNumber, 0, new byte[1])
+        dataNode.write(UUID.randomUUID(), blockNumber, 0, new byte[1])
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 无权访问该blockNumber，或者该blockNumber不存在
         when:
-        dataNodeServer.write(accessToken, blockNumber + 1, 0, new byte[1])
+        dataNode.write(accessToken, blockNumber + 1, 0, new byte[1])
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 无权访问该blockNumber，或者该blockNumber不存在
         when:
-        dataNodeServer.write(accessToken, -1, 0, new byte[1])
+        dataNode.write(accessToken, -1, 0, new byte[1])
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 写范围越界
         when:
-        dataNodeServer.write(accessToken, blockNumber, DataNodeServer.BLOCK_SIZE, new byte[1])
+        dataNode.write(accessToken, blockNumber, IDataNodeProtocol.BLOCK_SIZE, new byte[1])
 
         then:
         thrown(IllegalArgumentException)
-
+        // 写范围越界
         when:
-        dataNodeServer.write(accessToken, blockNumber, 0, new byte[DataNodeServer.BLOCK_SIZE + 1])
+        dataNode.write(accessToken, blockNumber, 0, new byte[IDataNodeProtocol.BLOCK_SIZE + 1])
 
         then:
         thrown(IllegalArgumentException)
-
+        // 正确写入数据
         when:
-        dataNodeServer.write(accessToken, blockNumber, POSITION, dataBuffer)
+        dataNode.write(accessToken, blockNumber, POSITION, dataBuffer)
 
         then:
         noExceptionThrown()
-
+        // token无写入权限
         when:
-        dataNodeServer.write(readonlyAccessToken, blockNumber, POSITION, dataBuffer)
+        dataNode.write(readonlyAccessToken, blockNumber, POSITION, dataBuffer)
 
         then:
         thrown(IllegalAccessTokenException)
     }
 
+    // ！！copy on write是在客户端实现时才需要这个测试！！
+    // 在服务端实现的可以注释掉这部分测试
     def "Client level copy on write"() {
-        def accessToken = nameNodeServer.create(filename).accessToken
-        def blockNumber = nameNodeServer.addBlocks(accessToken, 1)[0].dataBlockNumber
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
-        accessToken = nameNodeServer.openReadwrite(filename).accessToken
-        def readonlyAccessToken2 = nameNodeServer.openReadonly(filename).accessToken
-        def copyOnWriteBlock = nameNodeServer.newCopyOnWriteBlock(accessToken, 0).dataBlockNumber
-
+        def accessToken = nameNode.create(filename).token
+        def blockNumber = nameNode.addBlocks(accessToken, 1)[0].blockNumber
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        nameNode.closeReadwriteFile(accessToken, 1)
+        accessToken = nameNode.openReadwrite(filename).token
+        def readonlyAccessToken2 = nameNode.openReadonly(filename).token
+        def copyOnWriteBlock = nameNode.newCopyOnWriteBlock(accessToken, 0).blockNumber
+        // 不可直接修改已存在的block上数据
         when:
-        dataNodeServer.write(accessToken, blockNumber, POSITION, dataBuffer)
+        dataNode.write(accessToken, blockNumber, POSITION, dataBuffer)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 正确地在新的block上修改数据
         when:
-        dataNodeServer.write(accessToken, copyOnWriteBlock, POSITION, dataBuffer)
+        dataNode.write(accessToken, copyOnWriteBlock, POSITION, dataBuffer)
 
         then:
         noExceptionThrown()
-
+        // 另一个只读token在同时读取一段数据
         when:
-        dataNodeServer.read(readonlyAccessToken2, blockNumber, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken2, blockNumber, POSITION, BUFFER_SIZE)
 
         then:
         noExceptionThrown()
-
+        // 该token无权访问copyOnWriteBlock
         when:
-        dataNodeServer.read(readonlyAccessToken2, copyOnWriteBlock, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken2, copyOnWriteBlock, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 无权访问该blockNumber，该token获取时，accessToken对应的文件还未关闭，blockNumber还未属于该文件
         when:
-        dataNodeServer.read(readonlyAccessToken, blockNumber, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken, blockNumber, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 该token无权访问copyOnWriteBlock
         when:
-        dataNodeServer.read(readonlyAccessToken, copyOnWriteBlock, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken, copyOnWriteBlock, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // readonlyAccessToken2打开时blockNumber所属的文件已经关闭了，所以可以访问到blockNumber
         when:
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
-        dataNodeServer.read(readonlyAccessToken2, blockNumber, POSITION, BUFFER_SIZE)
+        nameNode.closeReadwriteFile(accessToken, 1)
+        dataNode.read(readonlyAccessToken2, blockNumber, POSITION, BUFFER_SIZE)
 
         then:
         noExceptionThrown()
-
+        // 该token无权访问copyOnWriteBlock
         when:
-        dataNodeServer.read(readonlyAccessToken2, copyOnWriteBlock, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken2, copyOnWriteBlock, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 无权访问该blockNumber，readonlyAccessToken所能访问的block在打开时就已确定，并且期间不会有变化
         when:
-        dataNodeServer.read(readonlyAccessToken, blockNumber, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken, blockNumber, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 该token无权访问copyOnWriteBlock
         when:
-        dataNodeServer.read(readonlyAccessToken, copyOnWriteBlock, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken, copyOnWriteBlock, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // blockNumber所对应的块在之前已经被copyOnWriteBlock替换，之后打开的token不能读到blockNumber所对应的块
         when:
-        def readonlyAccessToken3 = nameNodeServer.openReadonly(filename).accessToken
-        dataNodeServer.read(readonlyAccessToken3, blockNumber, POSITION, BUFFER_SIZE)
+        def readonlyAccessToken3 = nameNode.openReadonly(filename).token
+        dataNode.read(readonlyAccessToken3, blockNumber, POSITION, BUFFER_SIZE)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 正确打开并读取到新的块上的数据
         when:
-        dataNodeServer.read(readonlyAccessToken3, copyOnWriteBlock, POSITION, BUFFER_SIZE)
+        dataNode.read(readonlyAccessToken3, copyOnWriteBlock, POSITION, BUFFER_SIZE)
 
         then:
         noExceptionThrown()

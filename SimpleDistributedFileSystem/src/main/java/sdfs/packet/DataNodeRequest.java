@@ -5,14 +5,14 @@ import java.util.UUID;
 
 public class DataNodeRequest implements Serializable {
     private Type type;
-    private UUID uuid;
+    private UUID token;
     private int blockNumber, size;
     private long position;
     private byte[] data;
 
-    public DataNodeRequest(Type type, UUID uuid, int blockNumber, long position, int size, byte[] data) {
+    public DataNodeRequest(Type type, UUID token, int blockNumber, long position, int size, byte[] data) {
         this.type = type;
-        this.uuid = uuid;
+        this.token = token;
         this.blockNumber = blockNumber;
         this.position = position;
         this.size = size;
@@ -27,8 +27,8 @@ public class DataNodeRequest implements Serializable {
         return type;
     }
 
-    public UUID getUuid() {
-        return uuid;
+    public UUID getToken() {
+        return token;
     }
 
     public int getBlockNumber() {

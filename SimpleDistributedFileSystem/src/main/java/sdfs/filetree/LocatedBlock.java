@@ -40,4 +40,8 @@ public class LocatedBlock implements Serializable {
         result = 31 * result + blockNumber;
         return result;
     }
+
+    public LocatedBlock deepCopy() {
+        return new LocatedBlock(this.inetAddress, this.blockNumber);
+    }
 }

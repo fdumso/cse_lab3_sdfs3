@@ -2,24 +2,21 @@ package sdfs.namenode.log;
 
 import java.util.UUID;
 
-/**
- * Created by pengcheng on 2016/11/15.
- */
 public class WriteCommitLog implements Log {
-    private UUID fileAccessToken;
+    private UUID token;
     private long newFileSize;
 
-    public WriteCommitLog(UUID fileAccessToken, long newFileSize) {
-        this.fileAccessToken = fileAccessToken;
+    public WriteCommitLog(UUID token, long newFileSize) {
+        this.token = token;
         this.newFileSize = newFileSize;
     }
 
-    public UUID getFileAccessToken() {
-        return fileAccessToken;
+    public UUID getToken() {
+        return token;
     }
 
-    public void setFileAccessToken(UUID fileAccessToken) {
-        this.fileAccessToken = fileAccessToken;
+    public void setToken(UUID token) {
+        this.token = token;
     }
 
     public long getNewFileSize() {

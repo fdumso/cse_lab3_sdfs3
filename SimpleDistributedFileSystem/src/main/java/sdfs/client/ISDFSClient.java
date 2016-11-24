@@ -30,7 +30,7 @@ public interface ISDFSClient {
      * @return File channel of this file
      * @throws SDFSFileAlreadyExistsException if the file is already exist
      */
-    SDFSFileChannel create(String fileUri) throws SDFSFileAlreadyExistsException;
+    SDFSFileChannel create(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException;
 
     /**
      * Make a directory on given file uri.
@@ -38,5 +38,5 @@ public interface ISDFSClient {
      * @param fileUri the directory path
      * @throws SDFSFileAlreadyExistsException if directory or file is already exist
      */
-    void mkdir(String fileUri) throws SDFSFileAlreadyExistsException;
+    void mkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException;
 }

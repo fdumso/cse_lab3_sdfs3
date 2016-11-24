@@ -6,6 +6,8 @@ import sdfs.namenode.SDFSFileChannelData;
 import java.io.FileNotFoundException;
 
 public class SDFSClient implements ISDFSClient {
+    public static final int FILE_DATA_BLOCK_CACHE_SIZE = 3;
+
     private NameNodeStub nameNodeStub;
     private int fileDataBlockCacheSize;
 
@@ -28,13 +30,13 @@ public class SDFSClient implements ISDFSClient {
     }
 
     @Override
-    public SDFSFileChannel create(String fileUri) throws SDFSFileAlreadyExistsException {
+    public SDFSFileChannel create(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
         SDFSFileChannelData sdfsFileChannelData = nameNodeStub.create(fileUri);
         return new SDFSFileChannel(sdfsFileChannelData, nameNodeStub, fileDataBlockCacheSize);
     }
 
     @Override
-    public void mkdir(String fileUri) throws SDFSFileAlreadyExistsException {
+    public void mkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
         nameNodeStub.mkdir(fileUri);
     }
 }

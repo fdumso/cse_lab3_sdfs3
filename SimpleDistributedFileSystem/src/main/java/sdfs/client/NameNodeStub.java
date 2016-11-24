@@ -82,14 +82,28 @@ public class NameNodeStub implements INameNodeProtocol {
     }
 
     @Override
-    public SDFSFileChannelData create(String fileUri) throws SDFSFileAlreadyExistsException {
+    public SDFSFileChannelData create(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
         NameNodeRequest request = new NameNodeRequest(NameNodeRequest.Type.CREATE, fileUri, null, 0);
         NameNodeResponse response = sendRequest(request);
         assert response != null;
         if (response.getSDFSFileAlreadyExistsException() != null) {
             throw response.getSDFSFileAlreadyExistsException();
+        } else if (response.getFileNotFoundException() != null) {
+            throw response.getFileNotFoundException();
         } else {
             return response.getSDFSFileChannelData();
+        }
+    }
+
+    @Override
+    public void mkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
+        NameNodeRequest request = new NameNodeRequest(NameNodeRequest.Type.MK_DIR, fileUri, null, 0);
+        NameNodeResponse response = sendRequest(request);
+        assert response != null;
+        if (response.getSDFSFileAlreadyExistsException() != null) {
+            throw response.getSDFSFileAlreadyExistsException();
+        } else if (response.getFileNotFoundException() != null) {
+            throw response.getFileNotFoundException();
         }
     }
 
@@ -112,16 +126,6 @@ public class NameNodeStub implements INameNodeProtocol {
             throw response.getIllegalAccessTokenException();
         } else if (response.getIllegalArgumentException() != null) {
             throw response.getIllegalArgumentException();
-        }
-    }
-
-    @Override
-    public void mkdir(String fileUri) throws SDFSFileAlreadyExistsException {
-        NameNodeRequest request = new NameNodeRequest(NameNodeRequest.Type.MK_DIR, fileUri, null, 0);
-        NameNodeResponse response = sendRequest(request);
-        assert response != null;
-        if (response.getSDFSFileAlreadyExistsException() != null) {
-            throw response.getSDFSFileAlreadyExistsException();
         }
     }
 
@@ -150,12 +154,14 @@ public class NameNodeStub implements INameNodeProtocol {
     }
 
     @Override
-    public LocatedBlock newCopyOnWriteBlock(UUID fileAccessToken, int fileBlockNumber) throws IllegalStateException {
+    public LocatedBlock newCopyOnWriteBlock(UUID fileAccessToken, int fileBlockNumber) throws IllegalAccessTokenException, IndexOutOfBoundsException {
         NameNodeRequest request = new NameNodeRequest(NameNodeRequest.Type.NEW_COW_BLOCK, null, fileAccessToken, fileBlockNumber);
         NameNodeResponse response = sendRequest(request);
         assert response != null;
-        if (response.getIllegalStateException() != null) {
-            throw response.getIllegalStateException();
+        if (response.getIllegalAccessTokenException() != null) {
+            throw response.getIllegalAccessTokenException();
+        } else if (response.getIndexOutOfBoundsException() != null) {
+            throw response.getIndexOutOfBoundsException();
         } else {
             return response.getBlockList().get(0); // put the Located Block in the first index of the List
         }

@@ -3,36 +3,39 @@ package sdfs.datanode;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.packet.DataNodeRequest;
 import sdfs.packet.DataNodeResponse;
-import sdfs.protocol.IDataNodeProtocol;
-import sdfs.protocol.INameNodeDataNodeProtocol;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.UUID;
 
-public class DataNodeServer {
+public class DataNodeServer implements Runnable {
     private DataNode dataNode;
     private ServerSocket serverSocket;
 
-    public DataNodeServer() throws IOException {
+    public DataNodeServer() {
         this.dataNode = new DataNode();
-        this.serverSocket = new ServerSocket(DataNode.DATA_NODE_PORT);
-    }
-
-    private void start() throws IOException {
-        System.out.println("server started\nwaiting for request...");
-        while (true) {
-            Socket socketWithClient = serverSocket.accept();
-            new Thread(new ClientHandler(socketWithClient)).start();
+        try {
+            this.serverSocket = new ServerSocket(DataNode.DATA_NODE_PORT);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
-        try {
-            new DataNodeServer().start();
-        } catch (IOException e) {
-            e.printStackTrace();
+    public DataNode getDataNode() {
+        return dataNode;
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            Socket socketWithClient = null;
+            try {
+                socketWithClient = serverSocket.accept();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            new Thread(new ClientHandler(socketWithClient)).start();
         }
     }
 
@@ -75,14 +78,13 @@ public class DataNodeServer {
         }
 
         DataNodeResponse handleRead(DataNodeRequest request) {
-            DataNodeResponse.Type type = DataNodeResponse.Type.READ;
-            DataNodeResponse response = new DataNodeResponse(type);
-            UUID uuid = request.getUuid();
+            DataNodeResponse response = new DataNodeResponse();
+            UUID token = request.getToken();
             int blockNumber = request.getBlockNumber();
             long offset = request.getPosition();
             int size = request.getSize();
             try {
-                byte[] data = dataNode.read(uuid, blockNumber, offset, size);
+                byte[] data = dataNode.read(token, blockNumber, offset, size);
                 response.setData(data);
             } catch (IllegalAccessTokenException e) {
                 response.setIllegalAccessTokenException(new IllegalAccessTokenException());
@@ -93,18 +95,17 @@ public class DataNodeServer {
         }
 
         DataNodeResponse handleWrite(DataNodeRequest request) {
-            DataNodeResponse.Type type = DataNodeResponse.Type.WRITE;
-            DataNodeResponse response = new DataNodeResponse(type);
-            UUID uuid = request.getUuid();
+            DataNodeResponse response = new DataNodeResponse();
+            UUID token = request.getToken();
             int blockNumber = request.getBlockNumber();
-            int offset = request.getOffset();
+            long offset = request.getPosition();
             byte[] data = request.getData();
             try {
-                dataNode.write(uuid, blockNumber, offset, data);
-            } catch (IllegalStateException e) {
-                response.setIllegalStateException(new IllegalStateException());
-            } catch (IndexOutOfBoundsException e) {
-                response.setIndexOutOfBoundsException(new IndexOutOfBoundsException());
+                dataNode.write(token, blockNumber, offset, data);
+            } catch (IllegalAccessTokenException e) {
+                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+            } catch (IllegalArgumentException e) {
+                response.setIllegalArgumentException(new IllegalArgumentException());
             }
             return response;
         }

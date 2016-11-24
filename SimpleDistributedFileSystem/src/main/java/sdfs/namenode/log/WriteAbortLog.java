@@ -2,21 +2,18 @@ package sdfs.namenode.log;
 
 import java.util.UUID;
 
-/**
- * Created by pengcheng on 2016/11/15.
- */
 public class WriteAbortLog implements Log {
-    private UUID fileAccessToken;
+    private UUID token;
 
-    public WriteAbortLog(UUID fileAccessToken) {
-        this.fileAccessToken = fileAccessToken;
+    public WriteAbortLog(UUID token) {
+        this.token = token;
     }
 
-    public UUID getFileAccessToken() {
-        return fileAccessToken;
+    public UUID getToken() {
+        return token;
     }
 
-    public void setFileAccessToken(UUID fileAccessToken) {
-        this.fileAccessToken = fileAccessToken;
+    public void setToken(UUID token) {
+        this.token = token;
     }
 }

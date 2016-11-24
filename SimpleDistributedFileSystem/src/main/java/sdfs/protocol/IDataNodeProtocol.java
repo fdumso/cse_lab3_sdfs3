@@ -5,7 +5,7 @@ import sdfs.exception.IllegalAccessTokenException;
 import java.rmi.Remote;
 import java.util.UUID;
 
-public interface IDataNodeProtocol extends Remote {
+public interface IDataNodeProtocol {
 
 
     int BLOCK_SIZE = 64 * 1024;

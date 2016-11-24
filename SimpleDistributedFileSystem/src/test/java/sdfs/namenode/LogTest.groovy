@@ -1,16 +1,13 @@
 package sdfs.namenode
 
-import sdfs.datanode.DataNodeServer
 import sdfs.exception.SDFSFileAlreadyExistsException
-import sdfs.protocol.INameNodeProtocol
+import sdfs.protocol.IDataNodeProtocol
 import spock.lang.Specification
 
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.rmi.registry.LocateRegistry
 
 import static sdfs.Util.generateFilename
-import static sdfs.Util.generatePort
 
 class LogTest extends Specification {
     def dir1 = File.createTempDir().absolutePath
@@ -19,103 +16,103 @@ class LogTest extends Specification {
     def dir4 = File.createTempDir().absolutePath
 
     def "Log"() {
-        System.setProperty("sdfs.namenode.dir", dir1);
-        INameNodeProtocol nameNodeServer = new NameNodeServer(2, LocateRegistry.createRegistry(generatePort()))
+        System.setProperty("sdfs.namenode.dir", dir1)
+        NameNode nameNode = new NameNode(2)
         sleep(3000)
         Files.copy(Paths.get(dir1, "root.node"), Paths.get(dir2, "root.node"))
         def parentDir = generateFilename()
-        nameNodeServer.mkdir(parentDir)
+        nameNode.mkdir(parentDir)
         for (int i = 0; i < 255; i++)
-            nameNodeServer.mkdir(parentDir += "/" + generateFilename())
+            nameNode.mkdir(parentDir += "/" + generateFilename())
         def dirName = generateFilename()
         def filename = generateFilename()
         def filename2 = generateFilename()
-        nameNodeServer.mkdir("$parentDir/$dirName")
-        def accessToken = nameNodeServer.create("$parentDir/$filename").accessToken
-        def locatedBlock = nameNodeServer.addBlocks(accessToken, 1)[0]
-        def accessToken2 = nameNodeServer.create("$parentDir/$filename2").accessToken
-        def locatedBlock2 = nameNodeServer.addBlocks(accessToken2, 3)[0]
-        nameNodeServer.removeLastBlocks(accessToken2, 1)
-        def copyOnWriteBlock2 = nameNodeServer.newCopyOnWriteBlock(accessToken2, 1)
+        nameNode.mkdir("$parentDir/$dirName")
+        def accessToken = nameNode.create("$parentDir/$filename").token
+        def locatedBlock = nameNode.addBlocks(accessToken, 1)[0]
+        def accessToken2 = nameNode.create("$parentDir/$filename2").token
+        def locatedBlock2 = nameNode.addBlocks(accessToken2, 3)[0]
+        nameNode.removeLastBlocks(accessToken2, 1)
+        def copyOnWriteBlock2 = nameNode.newCopyOnWriteBlock(accessToken2, 1)
         sleep(3000)
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken2, DataNodeServer.BLOCK_SIZE * 2)
+        nameNode.closeReadwriteFile(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken2, IDataNodeProtocol.BLOCK_SIZE * 2)
         Files.copy(Paths.get(dir1, "root.node"), Paths.get(dir3, "root.node"))
         Files.copy(Paths.get(dir1, "namenode.log"), Paths.get(dir3, "namenode.log"))
         sleep(3000)
         Files.copy(Paths.get(dir1, "root.node"), Paths.get(dir4, "root.node"))
-        System.setProperty("sdfs.namenode.dir", dir2);
-        def nameNodeServer2 = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS, LocateRegistry.createRegistry(generatePort()))
-        System.setProperty("sdfs.namenode.dir", dir3);
-        def nameNodeServer3 = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS, LocateRegistry.createRegistry(generatePort()))
-        System.setProperty("sdfs.namenode.dir", dir4);
-        def nameNodeServer4 = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS, LocateRegistry.createRegistry(generatePort()))
+        System.setProperty("sdfs.namenode.dir", dir2)
+        def nameNode2 = new NameNode(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
+        System.setProperty("sdfs.namenode.dir", dir3)
+        def nameNode3 = new NameNode(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
+        System.setProperty("sdfs.namenode.dir", dir4)
+        def nameNode4 = new NameNode(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
 
         when:
-        nameNodeServer2.mkdir("$parentDir/$dirName")
+        nameNode2.mkdir("$parentDir/$dirName")
 
         then:
         thrown(FileNotFoundException)
 
         when:
-        nameNodeServer2.create("$parentDir/$filename")
+        nameNode2.create("$parentDir/$filename")
 
         then:
         thrown(FileNotFoundException)
 
         when:
-        nameNodeServer3.mkdir("$parentDir/$dirName")
+        nameNode3.mkdir("$parentDir/$dirName")
 
         then:
         thrown(SDFSFileAlreadyExistsException)
 
         when:
-        nameNodeServer3.create("$parentDir/$filename")
+        nameNode3.create("$parentDir/$filename")
 
         then:
         thrown(SDFSFileAlreadyExistsException)
 
         when:
-        def fileNode = nameNodeServer3.openReadonly("$parentDir/$filename").fileNode
+        def fileNode = nameNode3.openReadonly("$parentDir/$filename").fileNode
 
         then:
         fileNode.fileSize == 1
-        fileNode.data.fileBlocks[0][0] == locatedBlock
+        fileNode.blockInfoList[0][0] == locatedBlock
 
         when:
-        def fileNode2 = nameNodeServer3.openReadonly("$parentDir/$filename2").fileNode
+        def fileNode2 = nameNode3.openReadonly("$parentDir/$filename2").fileNode
 
         then:
-        fileNode2.fileSize == DataNodeServer.BLOCK_SIZE * 2
-        fileNode2.data.fileBlocks[0][0] == locatedBlock2
-        fileNode2.data.fileBlocks[1][0] == copyOnWriteBlock2
+        fileNode2.fileSize == IDataNodeProtocol.BLOCK_SIZE * 2
+        fileNode2.blockInfoList[0][0] == locatedBlock2
+        fileNode2.blockInfoList[1][0] == copyOnWriteBlock2
 
         when:
-        nameNodeServer4.mkdir("$parentDir/$dirName")
-
-        then:
-        thrown(SDFSFileAlreadyExistsException)
-
-        when:
-        nameNodeServer4.create("$parentDir/$filename")
+        nameNode4.mkdir("$parentDir/$dirName")
 
         then:
         thrown(SDFSFileAlreadyExistsException)
 
         when:
-        def fileNode3 = nameNodeServer4.openReadonly("$parentDir/$filename").fileNode
+        nameNode4.create("$parentDir/$filename")
+
+        then:
+        thrown(SDFSFileAlreadyExistsException)
+
+        when:
+        def fileNode3 = nameNode4.openReadonly("$parentDir/$filename").fileNode
 
         then:
         fileNode3.fileSize == 1
-        fileNode3.data.fileBlocks[0][0] == locatedBlock
+        fileNode3.blockInfoList[0][0] == locatedBlock
 
         when:
-        def fileNode4 = nameNodeServer4.openReadonly("$parentDir/$filename2").fileNode
+        def fileNode4 = nameNode4.openReadonly("$parentDir/$filename2").fileNode
 
         then:
-        fileNode4.fileSize == DataNodeServer.BLOCK_SIZE * 2
-        fileNode4.data.fileBlocks[0][0] == locatedBlock2
-        fileNode4.data.fileBlocks[1][0] == copyOnWriteBlock2
+        fileNode4.fileSize == IDataNodeProtocol.BLOCK_SIZE * 2
+        fileNode4.blockInfoList[0][0] == locatedBlock2
+        fileNode4.blockInfoList[1][0] == copyOnWriteBlock2
         new File(dir4, "namenode.log").size() == 4
     }
 }

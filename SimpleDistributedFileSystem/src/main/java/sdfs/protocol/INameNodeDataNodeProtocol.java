@@ -6,19 +6,12 @@ import java.rmi.Remote;
 import java.util.Set;
 import java.util.UUID;
 
-public interface INameNodeDataNodeProtocol extends Remote {
+public interface INameNodeDataNodeProtocol {
     /**
-     * Get original file access token permission
+     * Get current file access token permission
      *
      * @return Access token permission
      */
-    AccessTokenPermission getAccessTokenOriginalPermission(UUID fileAccessToken);
-
-    /**
-     * Get new allocated block of this file
-     *
-     * @return New allocated block of this file
-     */
-    Set<Integer> getAccessTokenNewBlocks(UUID fileAccessToken);
+    AccessTokenPermission getAccessTokenPermission(UUID fileAccessToken);
 
 }

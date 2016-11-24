@@ -1,14 +1,13 @@
 package sdfs.filetree;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.net.InetAddress;
+import java.util.*;
 
 public class FileNode extends Node implements Serializable, Iterable<BlockInfo> {
     private static final long serialVersionUID = -5007570814999866661L;
-    private final List<BlockInfo> blockInfoList = new ArrayList<>();
-    private long fileSize;// file size should be checked when closing the file.
+    private List<BlockInfo> blockInfoList = new ArrayList<>();
+    private long fileSize;
 
     public FileNode() {
         super(Type.FILE);
@@ -16,6 +15,10 @@ public class FileNode extends Node implements Serializable, Iterable<BlockInfo> 
 
     public void addBlockInfo(BlockInfo blockInfo) {
         blockInfoList.add(blockInfo);
+    }
+
+    public List<BlockInfo> getBlockInfoList() {
+        return blockInfoList;
     }
 
     public BlockInfo getLastBlockInfo() {
@@ -26,6 +29,23 @@ public class FileNode extends Node implements Serializable, Iterable<BlockInfo> 
         return blockInfoList.get(i);
     }
 
+    public Set<Integer> getBlockNumberSetOfAddress(InetAddress inetAddress) {
+        Set<Integer> result = new HashSet<>();
+        for (BlockInfo blockInfo :
+                blockInfoList) {
+            for (LocatedBlock locatedBlock : blockInfo) {
+                if (locatedBlock.getInetAddress().equals(inetAddress)) {
+                    result.add(locatedBlock.getBlockNumber());
+                }
+            }
+        }
+        return result;
+    }
+
+    public void setBlockInfoByIndex( int index, BlockInfo blockInfo) {
+        blockInfoList.set(index, blockInfo);
+    }
+
     public void removeLastBlockInfo() {
         blockInfoList.remove(blockInfoList.size() - 1);
     }
@@ -34,7 +54,7 @@ public class FileNode extends Node implements Serializable, Iterable<BlockInfo> 
         return fileSize;
     }
 
-    public void setFileSize(int fileSize) {
+    public void setFileSize(long fileSize) {
         this.fileSize = fileSize;
     }
 
@@ -50,11 +70,22 @@ public class FileNode extends Node implements Serializable, Iterable<BlockInfo> 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        else return false;
+    }
 
-        FileNode that = (FileNode) o;
+    public FileNode deepCopy() {
+        FileNode fileNode = new FileNode();
+        fileNode.setFileSize(this.fileSize);
+        for (BlockInfo blockInfo :
+                this.blockInfoList) {
+            fileNode.addBlockInfo(blockInfo.deepCopy());
+        }
+        return fileNode;
+    }
 
-        return blockInfoList.equals(that.blockInfoList);
+    public void assimilate(FileNode fileNode) {
+        this.blockInfoList = fileNode.blockInfoList;
+        this.fileSize = fileNode.fileSize;
     }
 
     @Override

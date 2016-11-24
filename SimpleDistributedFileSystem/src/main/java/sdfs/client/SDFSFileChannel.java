@@ -4,11 +4,10 @@
 
 package sdfs.client;
 
-import sdfs.exception.IllegalAccessTokenException;
+import sdfs.filetree.BlockInfo;
 import sdfs.filetree.FileNode;
 import sdfs.filetree.LocatedBlock;
 import sdfs.namenode.SDFSFileChannelData;
-import sdfs.protocol.IDataNodeProtocol;
 
 import java.io.Flushable;
 import java.io.IOException;
@@ -16,22 +15,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.SeekableByteChannel;
-import java.util.Set;
 import java.util.UUID;
+
+import static sdfs.protocol.IDataNodeProtocol.BLOCK_SIZE;
 
 public class SDFSFileChannel implements SeekableByteChannel, Flushable {
     private static final long serialVersionUID = 6892411224902751501L;
-    private static final int BLOCK_SIZE = IDataNodeProtocol.BLOCK_SIZE;
 
     // permission field
     private boolean writable;
-    private Set<Integer> allowedBlocks;
 
     // data field
     private UUID token;
     private FileNode fileNode;
-    private long fileSize; //Size of this file
-    private int blockAmount; //Total block amount of this file
 
     // local field
     private long position;
@@ -42,13 +38,10 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
     private CacheSystem cacheSystem;
 
     public SDFSFileChannel(SDFSFileChannelData data, NameNodeStub nameNodeStub, int fileDataBlockCacheSize) {
-        this.writable = data.getPermission().isWritable();
-        this.allowedBlocks = data.getPermission().getAllowedBlocks();
+        this.writable = data.isWritable();
 
         this.token = data.getToken();
         this.fileNode = data.getFileNode();
-        this.fileSize = data.getFileSize();
-        this.blockAmount = data.getBlockAmount();
 
         this.position = 0;
         this.closed = false;
@@ -57,32 +50,30 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
         this.nameNodeStub = nameNodeStub;
     }
 
+    public FileNode getFileNode() {
+        return fileNode;
+    }
+
     @Override
     public int read(ByteBuffer dst) throws IOException {
         if (this.closed) {
             throw new ClosedChannelException();
         }
-        if (position >= fileSize) {
+        if (position >= fileNode.getFileSize()) {
             return -1;
         }
         long oldPos = position;
-        int readSize = dst.array().length;
-        int index = 0;
-        while (index < readSize) {
+
+        while (dst.hasRemaining() && position < fileNode.getFileSize()) {
             int blockIndex = (int) (position / BLOCK_SIZE);
             int offset = (int) (position % BLOCK_SIZE);
 
-            int size = Math.min(readSize - index, BLOCK_SIZE - offset);
-            if (position + size > fileSize) {
-                size = (int) (fileSize - position);
-                index = readSize - size;
-            }
-            if (!allowedBlocks.contains(blockIndex)) {
-                throw new IllegalAccessTokenException();
+            int size = Math.min(dst.limit() - dst.position(), BLOCK_SIZE - offset);
+            if (position + size > fileNode.getFileSize()) {
+                size = (int) (fileNode.getFileSize() - position);
             }
             byte[] data = cacheSystem.read(blockIndex);
             dst.put(data, offset, size);
-            index += size;
             position += size;
         }
         return (int) (position - oldPos);
@@ -97,50 +88,53 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
             throw new NonWritableChannelException();
         }
         long oldPos = position;
-        byte[] srcBytes = src.array();
-        int totalSize = srcBytes.length;
 
         // write data
-        int index = 0;
-        while (index < totalSize) {
+        while (src.hasRemaining()) {
             int blockIndex = (int) (position / BLOCK_SIZE);
             int offset = (int) (position % BLOCK_SIZE);
-            int size = Math.min(totalSize - index, BLOCK_SIZE - offset);
+            int size = Math.min(src.limit() - src.position(), BLOCK_SIZE - offset);
+            byte[] bytes = new byte[size];
+            src = src.get(bytes);
 
-            if (blockIndex < blockAmount) {
+            if (blockIndex < fileNode.getBlockAmount()) {
                 // write on the block that may have data
-
+                byte[] oldData = cacheSystem.read(blockIndex);
+                byte[] newData = new byte[BLOCK_SIZE];
+                for (int i = 0; i < oldData.length; i++) {
+                    newData[i] = oldData[i];
+                }
+                for (int i = 0; i < size; i++) {
+                    newData[offset+i] = bytes[i];
+                }
                 // if the block has been cached and is dirty
                 // we do not need to ask for a copy on write block
                 // instead, we can write on the local block
-                if (!cacheSystem.isDirty(blockIndex)) {
+                if (cacheSystem.isDirty(blockIndex)) {
+                    // write data to cache
+                    cacheSystem.write(blockIndex, newData);
+                } else {
                     // copy on write
-                    if (!allowedBlocks.contains(blockIndex)) {
-                        throw new IllegalAccessTokenException();
-                    }
+                    LocatedBlock cowBlock = nameNodeStub.newCopyOnWriteBlock(token, blockIndex);
+                    BlockInfo blockInfo = new BlockInfo();
+                    blockInfo.addLocatedBlock(cowBlock);
+                    fileNode.setBlockInfoByIndex(blockIndex, blockInfo);
+                    // write data to cache
+                    cacheSystem.writeNew(blockIndex, cowBlock, newData);
                 }
-                byte[] oldData = cacheSystem.read(blockIndex);
-                LocatedBlock cowBlock = nameNodeStub.newCopyOnWriteBlock(token, blockIndex);
-                // update the data
-                for (int i = 0; i < size; i++) {
-                    oldData[i+offset] = srcBytes[i+index];
-                }
-                // write data to cache
-                cacheSystem.write(blockIndex, cowBlock, oldData);
             } else {
                 // write on new block
                 LocatedBlock newBlock = nameNodeStub.addBlocks(token, 1).get(0);
-                byte[] data = new byte[size];
-                for (int i = 0; i < size; i++) {
-                    data[i] = srcBytes[i+index];
-                }
-                cacheSystem.write(blockIndex, newBlock, data);
+                BlockInfo blockInfo = new BlockInfo();
+                blockInfo.addLocatedBlock(newBlock);
+                fileNode.addBlockInfo(blockInfo);
+                cacheSystem.writeNew(blockIndex, newBlock, bytes);
             }
-            index += size;
+            // src.position(src.position()+size);
             position += size;
         }
-        if (position > fileSize) {
-            fileSize = position;
+        if (position > fileNode.getFileSize()) {
+            fileNode.setFileSize(position);
         }
         return (int) (position - oldPos);
     }
@@ -171,7 +165,7 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
         if (this.closed) {
             throw new ClosedChannelException();
         }
-        return fileSize;
+        return fileNode.getFileSize();
     }
 
     @Override
@@ -185,20 +179,27 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
             if (newSize < 0) {
                 throw new IllegalArgumentException();
             } else {
-                if (newSize < fileSize) {
-                    fileSize = newSize;
+                if (newSize < fileNode.getFileSize()) {
+                    fileNode.setFileSize(newSize);
                 }
                 if (position > newSize) {
                     position = newSize;
                 }
                 // if block number exceeded file size
-                // remove redundant blocks
-                if (fileSize / IDataNodeProtocol.BLOCK_SIZE + 1 > blockAmount) {
-                    int exceededBlockAmount = (int) (fileSize / IDataNodeProtocol.BLOCK_SIZE) + 1 - blockAmount;
-                    for (int i = 0; i < exceededBlockAmount; i++) {
+                // remove redundant blocks, and clear cache
+                int neededBlockAmount = (int) (fileNode.getFileSize() / BLOCK_SIZE);
+                if (fileNode.getFileSize() % BLOCK_SIZE != 0) {
+                    neededBlockAmount++;
+                }
+                if (neededBlockAmount < fileNode.getBlockAmount()) {
+                    int exceededBlockCount = 0;
+                    for (int i = fileNode.getBlockAmount(); i > neededBlockAmount; i--) {
+                        // clear cache
+                        cacheSystem.removeCachedBlock(i-1);
                         fileNode.removeLastBlockInfo();
+                        exceededBlockCount++;
                     }
-                    nameNodeStub.removeLastBlocks(token, exceededBlockAmount);
+                    nameNodeStub.removeLastBlocks(token, exceededBlockCount);
                 }
             }
         }
@@ -212,17 +213,22 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
 
     @Override
     public void close() throws IOException {
-        flush();
-        this.closed = true;
-        if (writable) {
-            nameNodeStub.closeReadwriteFile(token, fileSize);
-        } else {
-            nameNodeStub.closeReadonlyFile(token);
+        if (!closed) {
+            cacheSystem.flush();
+            this.closed = true;
+            if (writable) {
+                nameNodeStub.closeReadwriteFile(token, fileNode.getFileSize());
+            } else {
+                nameNodeStub.closeReadonlyFile(token);
+            }
         }
     }
 
     @Override
     public void flush() throws IOException {
-        //todo your code here
+        if (this.closed) {
+            throw new ClosedChannelException();
+        }
+        cacheSystem.flush();
     }
 }

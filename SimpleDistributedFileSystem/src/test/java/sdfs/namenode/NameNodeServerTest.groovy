@@ -1,62 +1,58 @@
 package sdfs.namenode
 
-import sdfs.datanode.DataNodeServer
 import sdfs.exception.IllegalAccessTokenException
-import sdfs.protocol.INameNodeProtocol
+import sdfs.protocol.IDataNodeProtocol
 import spock.lang.Shared
 import spock.lang.Specification
 
-import java.rmi.registry.LocateRegistry
-
 import static sdfs.Util.generateFilename
-import static sdfs.Util.generatePort
 
 class NameNodeServerTest extends Specification {
     @Shared
-    INameNodeProtocol nameNodeServer
+    NameNode nameNode
 
     def setupSpec() {
-        System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath);
-        nameNodeServer = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS, LocateRegistry.createRegistry(generatePort()))
+        System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath)
+        nameNode = new NameNode(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
     }
 
     def "CloseReadonlyFile"() {
         def filename = generateFilename()
-        def accessToken = nameNodeServer.create(filename).accessToken
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-
+        def accessToken = nameNode.create(filename).token
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        // 无效的token
         when:
-        nameNodeServer.closeReadonlyFile(UUID.randomUUID())
+        nameNode.closeReadonlyFile(UUID.randomUUID())
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // accessToken为可读写权限，方法调用错误
         when:
-        nameNodeServer.closeReadonlyFile(accessToken)
+        nameNode.closeReadonlyFile(accessToken)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 正确关闭可读写文件
         when:
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
+        nameNode.closeReadwriteFile(accessToken, 0)
 
         then:
         noExceptionThrown()
-
+        // accessToken已被关闭
         when:
-        nameNodeServer.closeReadonlyFile(accessToken)
+        nameNode.closeReadonlyFile(accessToken)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 正确关闭只读文件
         when:
-        nameNodeServer.closeReadonlyFile(readonlyAccessToken)
+        nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:
         noExceptionThrown()
-
+        // readonlyAccessToken已被关闭
         when:
-        nameNodeServer.closeReadonlyFile(readonlyAccessToken)
+        nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:
         thrown(IllegalAccessTokenException)
@@ -64,72 +60,72 @@ class NameNodeServerTest extends Specification {
 
     def "CloseReadwriteFile"() {
         def filename = generateFilename()
-        def accessToken = nameNodeServer.create(filename).accessToken
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-
+        def accessToken = nameNode.create(filename).token
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        // 无效的token
         when:
-        nameNodeServer.closeReadwriteFile(UUID.randomUUID(), 0)
+        nameNode.closeReadwriteFile(UUID.randomUUID(), 0)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 文件大小错误
         when:
-        nameNodeServer.closeReadwriteFile(nameNodeServer.create(generateFilename()).accessToken, 1)
+        nameNode.closeReadwriteFile(nameNode.create(generateFilename()).token, 1)
 
         then:
         thrown(IllegalArgumentException)
-
+        // 文件大小错误
         when:
-        nameNodeServer.closeReadwriteFile(nameNodeServer.create(generateFilename()).accessToken, -1)
+        nameNode.closeReadwriteFile(nameNode.create(generateFilename()).token, -1)
 
         then:
         thrown(IllegalArgumentException)
-
+        // 正确关闭可读写文件
         when:
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
+        nameNode.closeReadwriteFile(accessToken, 0)
 
         then:
         noExceptionThrown()
-
+        // accessToken已被关闭
         when:
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
+        nameNode.closeReadwriteFile(accessToken, 0)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // readonlyAccessToken为只读权限，方法调用错误
         when:
-        nameNodeServer.closeReadwriteFile(readonlyAccessToken, 0)
+        nameNode.closeReadwriteFile(readonlyAccessToken, 0)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 文件大小错误
         when:
-        accessToken = nameNodeServer.openReadwrite(filename).accessToken
-        nameNodeServer.addBlocks(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
+        accessToken = nameNode.openReadwrite(filename).token
+        nameNode.addBlocks(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, 0)
 
         then:
         thrown(IllegalArgumentException)
-
+        // accessToken已经过期，注意：上面的close操作虽然失败，但由于并不是因为token错误，所以依然使得accessToken过期
         when:
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 正确关闭读写文件
         when:
-        accessToken = nameNodeServer.openReadwrite(filename).accessToken
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
+        accessToken = nameNode.openReadwrite(filename).token
+        nameNode.closeReadwriteFile(accessToken, 0)
 
         then:
         noExceptionThrown()
-
+        // 正确关闭读写文件，并正确添加以及删除block
         when:
-        accessToken = nameNodeServer.openReadwrite(filename).accessToken
-        nameNodeServer.addBlocks(accessToken, 1)
-        nameNodeServer.removeLastBlocks(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
-        nameNodeServer.closeReadonlyFile(readonlyAccessToken)
+        accessToken = nameNode.openReadwrite(filename).token
+        nameNode.addBlocks(accessToken, 1)
+        nameNode.removeLastBlocks(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, 0)
+        nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:
         noExceptionThrown()
@@ -138,47 +134,47 @@ class NameNodeServerTest extends Specification {
 
     def "AddBlocks"() {
         def filename = generateFilename()
-        def accessToken = nameNodeServer.create(filename).accessToken
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-
+        def accessToken = nameNode.create(filename).token
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        // 无效的token
         when:
-        nameNodeServer.addBlocks(UUID.randomUUID(), 1)
+        nameNode.addBlocks(UUID.randomUUID(), 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // readonlyAccessToken为只读权限，无法添加blocks
         when:
-        nameNodeServer.addBlocks(readonlyAccessToken, 1)
+        nameNode.addBlocks(readonlyAccessToken, 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 参数错误，数量必须大于零
         when:
-        nameNodeServer.addBlocks(accessToken, -1)
+        nameNode.addBlocks(accessToken, -1)
 
         then:
         thrown(IllegalArgumentException)
-
+        // 正确添加block以及关闭可读写文件
         when:
-        nameNodeServer.addBlocks(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
+        nameNode.addBlocks(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, 1)
 
         then:
         noExceptionThrown()
-
+        // 文件大小错误，文件还有两个block，大小应该大于64kb小于等于128kb
         when:
-        accessToken = nameNodeServer.openReadwrite(filename).accessToken
-        nameNodeServer.addBlocks(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
+        accessToken = nameNode.openReadwrite(filename).token
+        nameNode.addBlocks(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, 1)
 
         then:
         thrown(IllegalArgumentException)
-
+        // 正确添加以及关闭可读写文件，注意：由于上一条测试关闭失败，添加的block被取消，现在文件依然只含有两个block
         when:
-        accessToken = nameNodeServer.openReadwrite(filename).accessToken
-        nameNodeServer.addBlocks(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken, DataNodeServer.BLOCK_SIZE * 2)
-        nameNodeServer.closeReadonlyFile(readonlyAccessToken)
+        accessToken = nameNode.openReadwrite(filename).token
+        nameNode.addBlocks(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, IDataNodeProtocol.BLOCK_SIZE * 2)
+        nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:
         noExceptionThrown()
@@ -186,38 +182,38 @@ class NameNodeServerTest extends Specification {
 
     def "RemoveLastBlocks"() {
         def filename = generateFilename()
-        def accessToken = nameNodeServer.create(filename).accessToken
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-
+        def accessToken = nameNode.create(filename).token
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        // 无效的token
         when:
-        nameNodeServer.removeLastBlocks(UUID.randomUUID(), 1)
+        nameNode.removeLastBlocks(UUID.randomUUID(), 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // readonlyAccessToken为只读
         when:
-        nameNodeServer.removeLastBlocks(readonlyAccessToken, 1)
+        nameNode.removeLastBlocks(readonlyAccessToken, 1)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // accessToken对应的文件是新建的，并不包含任何block
         when:
-        nameNodeServer.removeLastBlocks(accessToken, 1)
+        nameNode.removeLastBlocks(accessToken, 1)
 
         then:
         thrown(IndexOutOfBoundsException)
-
+        // 参数错误，删除的block数必须大于零
         when:
-        nameNodeServer.addBlocks(accessToken, 1)
-        nameNodeServer.removeLastBlocks(accessToken, -1)
+        nameNode.addBlocks(accessToken, 1)
+        nameNode.removeLastBlocks(accessToken, -1)
 
         then:
         thrown(IllegalArgumentException)
-
+        // 正确删除block并关闭文件
         when:
-        nameNodeServer.removeLastBlocks(accessToken, 1)
-        nameNodeServer.closeReadwriteFile(accessToken, 0)
-        nameNodeServer.closeReadonlyFile(readonlyAccessToken)
+        nameNode.removeLastBlocks(accessToken, 1)
+        nameNode.closeReadwriteFile(accessToken, 0)
+        nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:
         noExceptionThrown()
@@ -225,38 +221,38 @@ class NameNodeServerTest extends Specification {
 
     def "newCopyOnWriteBlock"() {
         def filename = generateFilename()
-        def accessToken = nameNodeServer.create(filename).accessToken
-        nameNodeServer.addBlocks(accessToken, 1)
-        def readonlyAccessToken = nameNodeServer.openReadonly(filename).accessToken
-
+        def accessToken = nameNode.create(filename).token
+        nameNode.addBlocks(accessToken, 1)
+        def readonlyAccessToken = nameNode.openReadonly(filename).token
+        // 无效的token
         when:
-        nameNodeServer.newCopyOnWriteBlock(UUID.randomUUID(), 0)
+        nameNode.newCopyOnWriteBlock(UUID.randomUUID(), 0)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 权限错误，readonlyAccessToken为只读权限
         when:
-        nameNodeServer.newCopyOnWriteBlock(readonlyAccessToken, 0)
+        nameNode.newCopyOnWriteBlock(readonlyAccessToken, 0)
 
         then:
         thrown(IllegalAccessTokenException)
-
+        // 参数错误，accessToken对应文件当前只有一块block，序号从0开始，1代表第二块，所以超出范围
         when:
-        nameNodeServer.newCopyOnWriteBlock(accessToken, 1)
+        nameNode.newCopyOnWriteBlock(accessToken, 1)
 
         then:
         thrown(IndexOutOfBoundsException)
-
+        // 参数错误，必须大于等于0
         when:
-        nameNodeServer.newCopyOnWriteBlock(accessToken, -1)
+        nameNode.newCopyOnWriteBlock(accessToken, -1)
 
         then:
         thrown(IndexOutOfBoundsException)
-
+        // 正确修改并关闭文件
         when:
-        nameNodeServer.newCopyOnWriteBlock(accessToken, 0)
-        nameNodeServer.closeReadwriteFile(accessToken, 1)
-        nameNodeServer.closeReadonlyFile(readonlyAccessToken)
+        nameNode.newCopyOnWriteBlock(accessToken, 0)
+        nameNode.closeReadwriteFile(accessToken, 1)
+        nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:
         noExceptionThrown()

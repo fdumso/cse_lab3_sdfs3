@@ -1,27 +1,26 @@
 package sdfs.namenode.log;
 
+import sdfs.filetree.LocatedBlock;
+
 import java.util.UUID;
 
-/**
- * Created by pengcheng on 2016/11/15.
- */
 public class CopyOnWriteBlockLog implements Log {
-    private UUID fileAccessToken;
+    private UUID token;
     private int fileBlockNumber;
     private LocatedBlock locatedBlock;
 
-    public CopyOnWriteBlockLog(UUID fileAccessToken, int fileBlockNumber, LocatedBlock locatedBlock) {
-        this.fileAccessToken = fileAccessToken;
+    public CopyOnWriteBlockLog(UUID token, int fileBlockNumber, LocatedBlock locatedBlock) {
+        this.token = token;
         this.fileBlockNumber = fileBlockNumber;
         this.locatedBlock = locatedBlock;
     }
 
-    public UUID getFileAccessToken() {
-        return fileAccessToken;
+    public UUID getToken() {
+        return token;
     }
 
-    public void setFileAccessToken(UUID fileAccessToken) {
-        this.fileAccessToken = fileAccessToken;
+    public void setToken(UUID token) {
+        this.token = token;
     }
 
     public int getFileBlockNumber() {

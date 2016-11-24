@@ -11,7 +11,7 @@ import java.rmi.Remote;
 import java.util.List;
 import java.util.UUID;
 
-public interface INameNodeProtocol extends Remote {
+public interface INameNodeProtocol {
 
     int NAME_NODE_PORT = 4340;
 
@@ -44,7 +44,7 @@ public interface INameNodeProtocol extends Remote {
      * @return The SDFSFileChannelData represent the file.
      * @throws SDFSFileAlreadyExistsException if the file is already exist
      */
-    SDFSFileChannelData create(String fileUri) throws SDFSFileAlreadyExistsException;
+    SDFSFileChannelData create(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException;
 
     /**
      * Close a readonly file.
@@ -70,7 +70,7 @@ public interface INameNodeProtocol extends Remote {
      * @param fileUri the directory path
      * @throws SDFSFileAlreadyExistsException if directory or file is already exist
      */
-    void mkdir(String fileUri) throws SDFSFileAlreadyExistsException;
+    void mkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException;
 
     /**
      * Request a special amount of free blocks for a file
@@ -101,5 +101,5 @@ public interface INameNodeProtocol extends Remote {
      * @return a locatedBlock than could be used as copy on write block
      * @throws IllegalStateException if there is already copy on write on this file block
      */
-    LocatedBlock newCopyOnWriteBlock(UUID fileAccessToken, int fileBlockNumber) throws IllegalStateException;
+    LocatedBlock newCopyOnWriteBlock(UUID fileAccessToken, int fileBlockNumber) throws IllegalAccessTokenException, IndexOutOfBoundsException;
 }

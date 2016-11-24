@@ -3,17 +3,19 @@ package sdfs.packet;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.LocatedBlock;
+import sdfs.namenode.AccessTokenPermission;
 import sdfs.namenode.SDFSFileChannelData;
 
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.List;
+import java.util.Set;
 
 public class NameNodeResponse implements Serializable {
-    private Type type;
     private SDFSFileChannelData sdfsFileChannelData;
     private List<LocatedBlock> blockList;
+    private AccessTokenPermission accessTokenPermission;
 
     private SDFSFileAlreadyExistsException sdfsFileAlreadyExistsException;
     private FileNotFoundException fileNotFoundException;
@@ -22,19 +24,6 @@ public class NameNodeResponse implements Serializable {
     private IllegalAccessTokenException illegalAccessTokenException;
     private OverlappingFileLockException overlappingFileLockException;
     private IndexOutOfBoundsException indexOutOfBoundsException;
-
-
-    public NameNodeResponse(Type type) {
-        this.type = type;
-    }
-
-    public enum Type {
-        OPEN_READ_ONLY, OPEN_READ_WRITE, CREATE, MK_DIR, CLOSE_READ_ONLY, CLOSE_READ_WRITE, ADD_BLOCKS, REMOVE_LAST_BLOCKS, NEW_COW_BLOCK
-    }
-
-    public Type getType() {
-        return type;
-    }
 
     public SDFSFileAlreadyExistsException getSDFSFileAlreadyExistsException() {
         return sdfsFileAlreadyExistsException;
@@ -60,6 +49,10 @@ public class NameNodeResponse implements Serializable {
         return blockList;
     }
 
+    public AccessTokenPermission getAccessTokenPermission() {
+        return accessTokenPermission;
+    }
+
     public IllegalAccessTokenException getIllegalAccessTokenException() {
         return illegalAccessTokenException;
     }
@@ -74,6 +67,10 @@ public class NameNodeResponse implements Serializable {
 
     public void setSDFSFileChannelData(SDFSFileChannelData sdfsFileChannelData) {
         this.sdfsFileChannelData = sdfsFileChannelData;
+    }
+
+    public void setAccessTokenPermission(AccessTokenPermission accessTokenPermission) {
+        this.accessTokenPermission = accessTokenPermission;
     }
 
     public void setBlockList(List<LocatedBlock> blockList) {

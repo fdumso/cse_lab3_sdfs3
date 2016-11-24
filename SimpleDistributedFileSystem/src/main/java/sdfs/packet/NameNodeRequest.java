@@ -17,7 +17,9 @@ public class NameNodeRequest implements Serializable {
     }
 
     public enum Type {
-        OPEN_READ_ONLY, OPEN_READ_WRITE, CREATE, MK_DIR, CLOSE_READ_ONLY, CLOSE_READ_WRITE, ADD_BLOCKS, REMOVE_LAST_BLOCKS, NEW_COW_BLOCK
+        OPEN_READ_ONLY, OPEN_READ_WRITE, CREATE, MK_DIR, CLOSE_READ_ONLY, CLOSE_READ_WRITE,
+        ADD_BLOCKS, REMOVE_LAST_BLOCKS, NEW_COW_BLOCK,
+        GET_ACCESS_TOKEN_PERMISSION
     }
 
     public String getString() {

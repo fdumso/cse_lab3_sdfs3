@@ -8,7 +8,7 @@ public class AccessTokenPermission implements Serializable {
     private boolean writable;
     private Set<Integer> allowedBlocks;
 
-    public AccessTokenPermission(boolean writable, Set<Integer> allowBlocks) {
+    AccessTokenPermission(boolean writable, Set<Integer> allowBlocks) {
         this.writable = writable;
         this.allowedBlocks = allowBlocks;
     }

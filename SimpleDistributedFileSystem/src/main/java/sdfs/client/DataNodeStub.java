@@ -19,9 +19,9 @@ import java.util.UUID;
 public class DataNodeStub implements IDataNodeProtocol {
     private Socket socketWithServer;
 
-    public DataNodeStub(InetAddress inetAddress) {
+    DataNodeStub(InetAddress address, int port) {
         try {
-            socketWithServer = new Socket(inetAddress, IDataNodeProtocol.DATA_NODE_PORT);
+            socketWithServer = new Socket(address, port);
         } catch (IOException e) {
             System.err.println("Can not connect to DataNode!");
             e.printStackTrace();

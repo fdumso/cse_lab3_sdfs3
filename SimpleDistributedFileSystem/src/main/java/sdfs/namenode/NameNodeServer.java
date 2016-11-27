@@ -5,7 +5,7 @@ import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.LocatedBlock;
 import sdfs.packet.NameNodeRequest;
 import sdfs.packet.NameNodeResponse;
-import sdfs.protocol.INameNodeProtocol;
+import sdfs.protocol.SDFSConfiguration;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -13,20 +13,17 @@ import java.net.Socket;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 public class NameNodeServer implements Runnable {
-    public static final int FLUSH_DISK_INTERNAL_SECONDS = 60*1000;
-
     private NameNode nameNode;
     private ServerSocket serverSocket;
 
-    public NameNodeServer(long flushDiskInternalSeconds) {
-        this.nameNode = new NameNode(flushDiskInternalSeconds);
+    public NameNodeServer(SDFSConfiguration configuration, long flushDiskInternalSeconds) {
+        this.nameNode = new NameNode(configuration, flushDiskInternalSeconds);
 
         try {
-            this.serverSocket = new ServerSocket(INameNodeProtocol.NAME_NODE_PORT);
+            this.serverSocket = new ServerSocket(configuration.getNameNodePort());
         } catch (IOException e) {
             System.err.println("Socket error!");
             e.printStackTrace();
@@ -54,7 +51,7 @@ public class NameNodeServer implements Runnable {
     private class ClientHandler implements Runnable {
         private Socket socketWithClient;
 
-        public ClientHandler(Socket socketWithClient) {
+        ClientHandler(Socket socketWithClient) {
             this.socketWithClient = socketWithClient;
         }
 
@@ -103,10 +100,10 @@ public class NameNodeServer implements Runnable {
 
         }
 
-        private NameNodeResponse handleGetOriginalPermission(NameNodeRequest request) {
+        NameNodeResponse handleGetOriginalPermission(NameNodeRequest request) {
             NameNodeResponse response = new NameNodeResponse();
             UUID token = request.getToken();
-            AccessTokenPermission accessTokenPermission = nameNode.getAccessTokenPermission(token);
+            AccessTokenPermission accessTokenPermission = nameNode.getAccessTokenPermission(token, socketWithClient.getInetAddress());
             response.setAccessTokenPermission(accessTokenPermission);
             return response;
         }
@@ -226,8 +223,10 @@ public class NameNodeServer implements Runnable {
                 List<LocatedBlock> blockList = new ArrayList<>();
                 blockList.add(block);
                 response.setBlockList(blockList);
-            } catch (IllegalStateException e) {
-                response.setIllegalStateException(new IllegalStateException());
+            } catch (IllegalAccessTokenException e) {
+                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+            } catch (IndexOutOfBoundsException e) {
+                response.setIndexOutOfBoundsException(new IndexOutOfBoundsException());
             }
             return response;
         }

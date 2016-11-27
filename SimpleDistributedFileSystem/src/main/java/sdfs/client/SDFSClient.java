@@ -2,19 +2,18 @@ package sdfs.client;
 
 import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.namenode.SDFSFileChannelData;
+import sdfs.protocol.SDFSConfiguration;
 
 import java.io.FileNotFoundException;
 
 public class SDFSClient implements ISDFSClient {
-    public static final int FILE_DATA_BLOCK_CACHE_SIZE = 3;
-
     private NameNodeStub nameNodeStub;
     private int fileDataBlockCacheSize;
 
 
-    public SDFSClient(int fileDataBlockCacheSize) {
+    public SDFSClient(SDFSConfiguration configuration, int fileDataBlockCacheSize) {
         this.fileDataBlockCacheSize = fileDataBlockCacheSize;
-        this.nameNodeStub = new NameNodeStub();
+        this.nameNodeStub = new NameNodeStub(configuration.getNameNodeAddress(), configuration.getNameNodePort());
     }
 
     @Override

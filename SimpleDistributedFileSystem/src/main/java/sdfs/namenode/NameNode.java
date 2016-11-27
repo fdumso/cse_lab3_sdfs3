@@ -5,109 +5,62 @@ import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.*;
 import sdfs.protocol.INameNodeDataNodeProtocol;
 import sdfs.protocol.INameNodeProtocol;
+import sdfs.protocol.SDFSConfiguration;
 
 import java.io.*;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.*;
 
-import static sdfs.protocol.IDataNodeProtocol.BLOCK_SIZE;
+import static sdfs.datanode.DataNode.BLOCK_SIZE;
+
 
 public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
-    private static final String FILE_PATH = System.getProperty("sdfs.namenode.dir");
+    private static final String NAME_NODE_DIR = System.getProperty("sdfs.namenode.dir");
+    private static final String FILE_TREE_PATH = NAME_NODE_DIR+"filetree.data";
+    private static final String LOG_PATH = NAME_NODE_DIR+"namenode.log";
+    private final SDFSConfiguration configuration;
+    private final long flushDiskInternalSeconds;
 
-    private long flushDiskInternalSeconds;
+    // components
+    private final DataBlockManager dataBlockManager;
+    private final OpeningFileManager openingFileManager;
 
-    private final Map<UUID, FileNode> readonlyFile = new HashMap<>();
-    private final Map<UUID, FileNode> readwriteFile = new HashMap<>();
-    private final Map<UUID, FileNode> originalFile = new HashMap<>();
-    private final Map<InetAddress, Map<Integer, Integer>> busyBlockCountMap = new HashMap<>();
     private DirNode rootNode;
 
-    public NameNode(long flushDiskInternalSeconds) {
+    public NameNode(SDFSConfiguration configuration, long flushDiskInternalSeconds) {
         this.flushDiskInternalSeconds = flushDiskInternalSeconds;
+        this.configuration = configuration;
 
-        // init file tree
-        File rootDir = new File(FILE_PATH);
-        if (!rootDir.exists()) {
-            rootDir.mkdir();
-        }
-        // read root node
-        File rootNodeFile = new File(FILE_PATH+"root.node");
+        // read file tree stored on the disk
+        File rootNodeFile = new File(FILE_TREE_PATH);
         if (!rootNodeFile.exists()) {
             rootNode = new DirNode();
         } else {
             try {
                 ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(rootNodeFile));
                 rootNode = (DirNode) objectInputStream.readObject();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
         }
-        // construct a table to store data node block number info
-        initBlockListMap(rootNode);
 
-        // check log
-        // TODO
+        // init components
+        dataBlockManager = new DataBlockManager(rootNode);
+        openingFileManager = new OpeningFileManager();
+        DiskFlusher diskFlusher = new DiskFlusher(rootNode, LOG_PATH, flushDiskInternalSeconds);
+
+        // start flushing to disk
+        new Thread(diskFlusher).start();
     }
 
-    private void initBlockListMap(DirNode node) {
-        for (Entry e : node) {
-            Node n = e.getNode();
-            if (n.getType() == Node.Type.FILE) {
-                for (BlockInfo blockInfo : ((FileNode) n)) {
-                    for (LocatedBlock locatedBlock : blockInfo) {
-                        InetAddress address = locatedBlock.getInetAddress();
-                        int blockNumber = locatedBlock.getBlockNumber();
-                        Map<Integer, Integer> busyBlockCount;
-                        if (busyBlockCountMap.containsKey(address)) {
-                            busyBlockCount = busyBlockCountMap.get(address);
-                        } else {
-                            busyBlockCount = new HashMap<>();
-                            busyBlockCountMap.put(address, busyBlockCount);
-                        }
-                        busyBlockCount.put(blockNumber, 1);
-                    }
-                }
-            } else {
-                initBlockListMap((DirNode) n);
-            }
-        }
-    }
-
-    private int getNextBlockNumber(InetAddress address) {
-        if (busyBlockCountMap.containsKey(address)) {
-            Map<Integer, Integer> busyBlockCount = busyBlockCountMap.get(address);
-            int index = 0;
-            while (true) {
-                if (!busyBlockCount.containsKey(index)) {
-                    busyBlockCount.put(index, 1);
-                    return index;
-                }
-                index++;
-            }
-        } else {
-            Map<Integer, Integer> busyBlockCount = new HashMap<>();
-            busyBlockCountMap.put(address, busyBlockCount);
-            busyBlockCount.put(0, 1);
-            return 0;
-        }
-    }
-
-//    private void updateNode() {
-//        try {
-//            FileOutputStream fileOutputStream = new FileOutputStream(FILE_PATH+"root.node");
-//            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-//            objectOutputStream.writeObject(rootNode);
-//            objectOutputStream.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
+    /**
+     * to located the directory of a file
+     * since it does not modify the file tree, we do not need to make sure it is atomic
+     * @param fileUri the uri that specify the file
+     * @return the directory of the file specified by the uri
+     * @throws FileNotFoundException if the directory does not exist
+     */
     private DirNode locateDir(String fileUri) throws FileNotFoundException {
         String[] dirStrList = fileUri.split("/");
         int nextIndex = 0;
@@ -123,6 +76,13 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         return currentRoot;
     }
 
+    /**
+     * to located the file specified by the uri
+     * since it does not modify the file tree, we do not need to make sure it is atomic
+     * @param fileUri the uri of the file to located
+     * @return the file node
+     * @throws FileNotFoundException if the file does not exist or the directory does not exist
+     */
     private FileNode locateFile(String fileUri) throws FileNotFoundException {
         if (fileUri.endsWith("/")) {
             throw new FileNotFoundException();
@@ -137,23 +97,20 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         }
     }
 
+    /*
+    Since token is unique to each client
+    we do not need to consider thread safety for this transaction
+     */
     @Override
-    public AccessTokenPermission getAccessTokenPermission(UUID token) {
-        FileNode fileNode;
-        if ((fileNode = readwriteFile.get(token)) != null) {
-            try {
-                Set<Integer> allowedBlocks = fileNode.getBlockNumberSetOfAddress(InetAddress.getLocalHost());
-                return new AccessTokenPermission(true, allowedBlocks);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            }
-        } else if ((fileNode = readonlyFile.get(token)) != null) {
-            try {
-                Set<Integer> allowedBlocks = fileNode.getBlockNumberSetOfAddress(InetAddress.getLocalHost());
-                return new AccessTokenPermission(false, allowedBlocks);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            }
+    public AccessTokenPermission getAccessTokenPermission(UUID token, InetAddress dataNodeAddress) {
+        if (openingFileManager.isReading(token)) {
+            FileNode fileNode = openingFileManager.getReadingFile(token);
+            Set<Integer> allowedBlocks = fileNode.getBlockNumberSetOfAddress(dataNodeAddress);
+            return new AccessTokenPermission(true, allowedBlocks);
+        } else if (openingFileManager.isWriting(token)) {
+            FileNode fileNode = openingFileManager.getWritingFile(token);
+            Set<Integer> allowedBlocks = fileNode.getBlockNumberSetOfAddress(dataNodeAddress);
+            return new AccessTokenPermission(false, allowedBlocks);
         }
         return null;
     }
@@ -161,11 +118,9 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
     @Override
     public SDFSFileChannelData openReadonly(String fileUri) throws FileNotFoundException {
         FileNode fileNode = locateFile(fileUri);
-
-        // copy the file node to keep the data unchanged
-        FileNode readingNode = fileNode.deepCopy();
         UUID token = UUID.randomUUID();
-        readonlyFile.put(token, readingNode);
+        FileNode readingNode = openingFileManager.openRead(token, fileNode);
+
         return new SDFSFileChannelData(readingNode, false, token);
     }
 
@@ -178,7 +133,7 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
 
         // copy the file node and sent it the client
         UUID token = UUID.randomUUID();
-        FileNode writingNode = fileNode.deepCopy();
+        FileNode writingNode = fileNode.copy();
         SDFSFileChannelData sdfsFileChannelData = new SDFSFileChannelData(writingNode, true, token);
         readwriteFile.put(token, writingNode);
         originalFile.put(token, fileNode);
@@ -204,7 +159,7 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
             dirNode.addEntry(newEntry);
 
             // copy the file node and sent it to client
-            FileNode writingNode = fileNode.deepCopy();
+            FileNode writingNode = fileNode.copy();
             UUID token = UUID.randomUUID();
             readwriteFile.put(token, writingNode);
             originalFile.put(token, fileNode);
@@ -280,17 +235,13 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         if (blockAmount < 0) {
             throw new IllegalArgumentException();
         }
-        try {
-            FileNode writingNode = readwriteFile.get(token);
-            for (int i = 0; i < blockAmount; i++) {
-                BlockInfo blockInfo = new BlockInfo();
-                LocatedBlock locatedBlock = new LocatedBlock(InetAddress.getLocalHost(), getNextBlockNumber(InetAddress.getLocalHost()));
-                blockInfo.addLocatedBlock(locatedBlock);
-                writingNode.addBlockInfo(blockInfo);
-                result.add(locatedBlock);
-            }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
+        FileNode writingNode = readwriteFile.get(token);
+        for (int i = 0; i < blockAmount; i++) {
+            BlockInfo blockInfo = new BlockInfo();
+            LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), getNextBlockNumber(configuration.getDataNodeAddress()));
+            blockInfo.addLocatedBlock(locatedBlock);
+            writingNode.addBlockInfo(blockInfo);
+            result.add(locatedBlock);
         }
         return result;
     }
@@ -320,11 +271,7 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         }
         BlockInfo blockInfo = new BlockInfo();
         LocatedBlock locatedBlock = null;
-        try {
-            locatedBlock = new LocatedBlock(InetAddress.getLocalHost(), getNextBlockNumber(InetAddress.getLocalHost()));
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+        locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), getNextBlockNumber(configuration.getDataNodeAddress()));
         blockInfo.addLocatedBlock(locatedBlock);
         writingNode.setBlockInfoByIndex(fileBlockNumber, blockInfo);
         return locatedBlock;

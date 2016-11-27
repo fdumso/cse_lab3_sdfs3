@@ -3,6 +3,7 @@ package sdfs.client
 import sdfs.datanode.DataNodeServer
 import sdfs.exception.SDFSFileAlreadyExistsException
 import sdfs.namenode.NameNodeServer
+import sdfs.protocol.SDFSConfiguration
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -11,6 +12,7 @@ import java.nio.channels.ClosedChannelException
 import java.nio.channels.NonWritableChannelException
 
 import static sdfs.Util.generateFilename
+import static sdfs.Util.generatePort
 
 class SDFSClientBasicTest extends Specification {
     @Shared
@@ -23,9 +25,10 @@ class SDFSClientBasicTest extends Specification {
     def setupSpec() {
         System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath)
         System.setProperty("sdfs.datanode.dir", File.createTempDir().absolutePath)
-        nameNodeServer = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
-        dataNodeServer = new DataNodeServer()
-        client = new SDFSClient(SDFSClient.FILE_DATA_BLOCK_CACHE_SIZE)
+        SDFSConfiguration configuration = new SDFSConfiguration(InetAddress.getLocalHost(), generatePort(), InetAddress.getLocalHost(), generatePort())
+        nameNodeServer = new NameNodeServer(configuration, 10)
+        dataNodeServer = new DataNodeServer(configuration)
+        client = new SDFSClient(configuration, 3)
         new Thread(nameNodeServer).start()
         new Thread(dataNodeServer).start()
     }

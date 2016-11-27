@@ -1,8 +1,9 @@
 package sdfs.client
 
+import sdfs.datanode.DataNode
 import sdfs.datanode.DataNodeServer
 import sdfs.namenode.NameNodeServer
-import sdfs.protocol.IDataNodeProtocol
+import sdfs.protocol.SDFSConfiguration
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -10,6 +11,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.OverlappingFileLockException
 
 import static sdfs.Util.generateFilename
+import static sdfs.Util.generatePort
 import static sdfs.Util.getBlockAmount
 
 class SDFSClientTest extends Specification {
@@ -20,7 +22,7 @@ class SDFSClientTest extends Specification {
     @Shared
     SDFSClient client
     @Shared
-    def FILE_SIZE = 2 * IDataNodeProtocol.BLOCK_SIZE + 2
+    def FILE_SIZE = 2 * DataNode.BLOCK_SIZE + 2
     @Shared
     def dataBuffer = ByteBuffer.allocate(FILE_SIZE)
     @Shared
@@ -31,11 +33,12 @@ class SDFSClientTest extends Specification {
     def setupSpec() {
         System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath)
         System.setProperty("sdfs.datanode.dir", File.createTempDir().absolutePath)
-        nameNodeServer = new NameNodeServer(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
-        dataNodeServer = new DataNodeServer()
+        SDFSConfiguration configuration = new SDFSConfiguration(InetAddress.getLocalHost(), generatePort(), InetAddress.getLocalHost(), generatePort())
+        nameNodeServer = new NameNodeServer(configuration, 10)
+        dataNodeServer = new DataNodeServer(configuration)
         new Thread(nameNodeServer).start()
         new Thread(dataNodeServer).start()
-        client = new SDFSClient(SDFSClient.FILE_DATA_BLOCK_CACHE_SIZE)
+        client = new SDFSClient(configuration, 3)
         for (int i = 0; i < FILE_SIZE; i++)
             dataBuffer.put(i.byteValue())
     }
@@ -192,7 +195,7 @@ class SDFSClientTest extends Specification {
 
     def "Test append data"() {
         def fileSize = FILE_SIZE
-        def secondPosition = 3 * IDataNodeProtocol.BLOCK_SIZE - 1
+        def secondPosition = 3 * DataNode.BLOCK_SIZE - 1
         // secondPosition大小超过FILE_SIZE，FILE_SIZE = 2 * DataNodeServer.BLOCK_SIZE + 2
         writeData()
         // 打开读写channel
@@ -260,7 +263,7 @@ class SDFSClientTest extends Specification {
         buffer.position(0)
 
         then:
-        for (int i = 0; i < IDataNodeProtocol.BLOCK_SIZE - 3; i++)
+        for (int i = 0; i < DataNode.BLOCK_SIZE - 3; i++)
             buffer.get() == 0.byteValue()
         buffer.get() == 0.byteValue()
         buffer.get() == 1.byteValue()

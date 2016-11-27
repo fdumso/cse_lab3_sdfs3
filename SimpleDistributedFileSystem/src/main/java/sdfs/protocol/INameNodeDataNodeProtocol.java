@@ -2,8 +2,7 @@ package sdfs.protocol;
 
 import sdfs.namenode.AccessTokenPermission;
 
-import java.rmi.Remote;
-import java.util.Set;
+import java.net.InetAddress;
 import java.util.UUID;
 
 public interface INameNodeDataNodeProtocol {
@@ -12,6 +11,6 @@ public interface INameNodeDataNodeProtocol {
      *
      * @return Access token permission
      */
-    AccessTokenPermission getAccessTokenPermission(UUID fileAccessToken);
+    AccessTokenPermission getAccessTokenPermission(UUID fileAccessToken, InetAddress dataNodeAddress);
 
 }

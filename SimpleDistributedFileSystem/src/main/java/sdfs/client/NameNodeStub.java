@@ -22,9 +22,9 @@ public class NameNodeStub implements INameNodeProtocol {
 
     private Socket socketWithServer;
 
-    public NameNodeStub() {
+    NameNodeStub(InetAddress address, int port) {
         try {
-            this.socketWithServer = new Socket(InetAddress.getLocalHost(), INameNodeProtocol.NAME_NODE_PORT);
+            this.socketWithServer = new Socket(address, port);
         } catch (IOException e) {
             System.err.println("Can not connect to NameNode!");
             e.printStackTrace();

@@ -5,23 +5,29 @@ import java.net.InetAddress;
 
 public class LocatedBlock implements Serializable {
     private static final long serialVersionUID = -6509598325324530684L;
-    private final InetAddress inetAddress;
-    private final int blockNumber;
+    private final InetAddress address;
+    private final int port;
+    private final int id;
 
-    public LocatedBlock(InetAddress inetAddress, int blockNumber) {
-        if (inetAddress == null) {
+    public LocatedBlock(InetAddress address, int port, int id) {
+        if (address == null) {
             throw new NullPointerException();
         }
-        this.inetAddress = inetAddress;
-        this.blockNumber = blockNumber;
+        this.address = address;
+        this.port = port;
+        this.id = id;
     }
 
-    public InetAddress getInetAddress() {
-        return inetAddress;
+    public InetAddress getAddress() {
+        return address;
     }
 
-    public int getBlockNumber() {
-        return blockNumber;
+    public int getId() {
+        return id;
+    }
+
+    public int getPort() {
+        return port;
     }
 
     @Override
@@ -31,17 +37,17 @@ public class LocatedBlock implements Serializable {
 
         LocatedBlock that = (LocatedBlock) o;
 
-        return blockNumber == that.blockNumber && inetAddress.equals(that.inetAddress);
+        return id == that.id && address.equals(that.address);
     }
 
     @Override
     public int hashCode() {
-        int result = inetAddress.hashCode();
-        result = 31 * result + blockNumber;
+        int result = address.hashCode();
+        result = 31 * result + id;
         return result;
     }
 
-    public LocatedBlock deepCopy() {
-        return new LocatedBlock(this.inetAddress, this.blockNumber);
+    LocatedBlock deepCopy() {
+        return new LocatedBlock(this.address, this.port, this.id);
     }
 }

@@ -9,7 +9,7 @@ public abstract class Node implements Serializable {
         FILE, DIR
         }
 
-    public Node(Type type) {
+    Node(Type type) {
         this.type = type;
     }
 

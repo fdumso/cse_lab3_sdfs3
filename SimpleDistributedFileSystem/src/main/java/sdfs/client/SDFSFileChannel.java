@@ -17,11 +17,10 @@ import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.SeekableByteChannel;
 import java.util.UUID;
 
-import static sdfs.protocol.IDataNodeProtocol.BLOCK_SIZE;
+import static sdfs.datanode.DataNode.BLOCK_SIZE;
+
 
 public class SDFSFileChannel implements SeekableByteChannel, Flushable {
-    private static final long serialVersionUID = 6892411224902751501L;
-
     // permission field
     private boolean writable;
 
@@ -37,7 +36,7 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
     private NameNodeStub nameNodeStub;
     private CacheSystem cacheSystem;
 
-    public SDFSFileChannel(SDFSFileChannelData data, NameNodeStub nameNodeStub, int fileDataBlockCacheSize) {
+    SDFSFileChannel(SDFSFileChannelData data, NameNodeStub nameNodeStub, int fileDataBlockCacheSize) {
         this.writable = data.isWritable();
 
         this.token = data.getToken();
@@ -101,12 +100,8 @@ public class SDFSFileChannel implements SeekableByteChannel, Flushable {
                 // write on the block that may have data
                 byte[] oldData = cacheSystem.read(blockIndex);
                 byte[] newData = new byte[BLOCK_SIZE];
-                for (int i = 0; i < oldData.length; i++) {
-                    newData[i] = oldData[i];
-                }
-                for (int i = 0; i < size; i++) {
-                    newData[offset+i] = bytes[i];
-                }
+                System.arraycopy(oldData, 0, newData, 0, oldData.length);
+                System.arraycopy(bytes, 0, newData, offset, size);
                 // if the block has been cached and is dirty
                 // we do not need to ask for a copy on write block
                 // instead, we can write on the local block

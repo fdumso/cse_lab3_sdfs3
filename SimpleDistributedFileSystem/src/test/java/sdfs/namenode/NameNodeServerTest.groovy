@@ -1,11 +1,13 @@
 package sdfs.namenode
 
+import sdfs.datanode.DataNode
 import sdfs.exception.IllegalAccessTokenException
-import sdfs.protocol.IDataNodeProtocol
+import sdfs.protocol.SDFSConfiguration
 import spock.lang.Shared
 import spock.lang.Specification
 
 import static sdfs.Util.generateFilename
+import static sdfs.Util.generatePort
 
 class NameNodeServerTest extends Specification {
     @Shared
@@ -13,7 +15,8 @@ class NameNodeServerTest extends Specification {
 
     def setupSpec() {
         System.setProperty("sdfs.namenode.dir", File.createTempDir().absolutePath)
-        nameNode = new NameNode(NameNodeServer.FLUSH_DISK_INTERNAL_SECONDS)
+        SDFSConfiguration configuration = new SDFSConfiguration(InetAddress.getLocalHost(), generatePort(), InetAddress.getLocalHost(), generatePort())
+        nameNode = new NameNode(configuration, 10)
     }
 
     def "CloseReadonlyFile"() {
@@ -173,7 +176,7 @@ class NameNodeServerTest extends Specification {
         when:
         accessToken = nameNode.openReadwrite(filename).token
         nameNode.addBlocks(accessToken, 1)
-        nameNode.closeReadwriteFile(accessToken, IDataNodeProtocol.BLOCK_SIZE * 2)
+        nameNode.closeReadwriteFile(accessToken, DataNode.BLOCK_SIZE * 2)
         nameNode.closeReadonlyFile(readonlyAccessToken)
 
         then:

@@ -12,7 +12,7 @@ public class SDFSFileChannelData implements Serializable {
     private FileNode fileNode;
     private boolean writable;
 
-    public SDFSFileChannelData(FileNode fileNode, boolean writable, UUID token) {
+    SDFSFileChannelData(FileNode fileNode, boolean writable, UUID token) {
         this.token = token;
         this.fileNode = fileNode;
         this.writable = writable;

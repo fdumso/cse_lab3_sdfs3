@@ -3,6 +3,7 @@ package sdfs.datanode;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.packet.DataNodeRequest;
 import sdfs.packet.DataNodeResponse;
+import sdfs.protocol.SDFSConfiguration;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -13,10 +14,10 @@ public class DataNodeServer implements Runnable {
     private DataNode dataNode;
     private ServerSocket serverSocket;
 
-    public DataNodeServer() {
-        this.dataNode = new DataNode();
+    public DataNodeServer(SDFSConfiguration configuration) {
+        this.dataNode = new DataNode(configuration.getNameNodeAddress(), configuration.getNameNodePort());
         try {
-            this.serverSocket = new ServerSocket(DataNode.DATA_NODE_PORT);
+            this.serverSocket = new ServerSocket(configuration.getDataNodePort());
         } catch (IOException e) {
             e.printStackTrace();
         }

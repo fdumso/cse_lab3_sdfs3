@@ -10,7 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.List;
-import java.util.Set;
 
 public class NameNodeResponse implements Serializable {
     private SDFSFileChannelData sdfsFileChannelData;
@@ -19,7 +18,6 @@ public class NameNodeResponse implements Serializable {
 
     private SDFSFileAlreadyExistsException sdfsFileAlreadyExistsException;
     private FileNotFoundException fileNotFoundException;
-    private IllegalStateException illegalStateException;
     private IllegalArgumentException illegalArgumentException;
     private IllegalAccessTokenException illegalAccessTokenException;
     private OverlappingFileLockException overlappingFileLockException;
@@ -31,10 +29,6 @@ public class NameNodeResponse implements Serializable {
 
     public FileNotFoundException getFileNotFoundException() {
         return fileNotFoundException;
-    }
-
-    public IllegalStateException getIllegalStateException() {
-        return illegalStateException;
     }
 
     public IllegalArgumentException getIllegalArgumentException() {
@@ -83,10 +77,6 @@ public class NameNodeResponse implements Serializable {
 
     public void setFileNotFoundException(FileNotFoundException fileNotFoundException) {
         this.fileNotFoundException = fileNotFoundException;
-    }
-
-    public void setIllegalStateException(IllegalStateException illegalStateException) {
-        this.illegalStateException = illegalStateException;
     }
 
     public void setIllegalArgumentException(IllegalArgumentException illegalArgumentException) {

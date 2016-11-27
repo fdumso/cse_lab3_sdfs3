@@ -17,17 +17,7 @@ public class Entry implements Serializable {
         this.node = node;
     }
 
-    public void setName(String name) {
-        if (name == null) {
-            throw new NullPointerException();
-        }
-        if (name.isEmpty() || name.contains("/")) {
-            throw new IllegalArgumentException();
-        }
-        this.name = name;
-    }
-
-    public String getName() {
+    String getName() {
         return name;
     }
 

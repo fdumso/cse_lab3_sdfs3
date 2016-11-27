@@ -2,16 +2,9 @@ package sdfs.protocol;
 
 import sdfs.exception.IllegalAccessTokenException;
 
-import java.rmi.Remote;
 import java.util.UUID;
 
 public interface IDataNodeProtocol {
-
-
-    int BLOCK_SIZE = 64 * 1024;
-    int DATA_NODE_PORT = 4341;
-
-
     /**
      * Read data from a block.
      * It should be redirect to [dataBlockNumber].block file

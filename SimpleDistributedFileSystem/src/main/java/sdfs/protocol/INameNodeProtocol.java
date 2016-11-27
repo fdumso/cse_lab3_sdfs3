@@ -7,14 +7,10 @@ import sdfs.namenode.SDFSFileChannelData;
 
 import java.io.FileNotFoundException;
 import java.nio.channels.OverlappingFileLockException;
-import java.rmi.Remote;
 import java.util.List;
 import java.util.UUID;
 
 public interface INameNodeProtocol {
-
-    int NAME_NODE_PORT = 4340;
-
     /**
      * Open a readonly file that is already exist.
      * Allow multi readonly access to the same file.

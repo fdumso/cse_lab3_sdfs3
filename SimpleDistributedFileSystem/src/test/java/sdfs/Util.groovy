@@ -1,7 +1,7 @@
 package sdfs
 
 import org.apache.commons.lang3.RandomStringUtils
-import sdfs.datanode.DataNodeServer
+import sdfs.datanode.DataNode
 import sdfs.protocol.IDataNodeProtocol
 
 class Util {
@@ -16,6 +16,6 @@ class Util {
     }
 
     static int getBlockAmount(int fileSize) {
-        fileSize == 0 ? 0 : (((fileSize - 1) / IDataNodeProtocol.BLOCK_SIZE) + 1) as int
+        fileSize == 0 ? 0 : (((fileSize - 1) / DataNode.BLOCK_SIZE) + 1) as int
     }
 }

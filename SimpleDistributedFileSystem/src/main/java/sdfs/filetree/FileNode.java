@@ -3,94 +3,110 @@ package sdfs.filetree;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class FileNode extends Node implements Serializable, Iterable<BlockInfo> {
     private static final long serialVersionUID = -5007570814999866661L;
-    private List<BlockInfo> blockInfoList = new ArrayList<>();
-    private long fileSize;
+    private AtomicReference<FileInfo> fileInfoAR = new AtomicReference<>();
 
     public FileNode() {
         super(Type.FILE);
+        fileInfoAR.set(new FileInfo());
+    }
+
+    class FileInfo {
+        private List<BlockInfo> blockInfoList = new ArrayList<>();
+        private long fileSize;
     }
 
     public void addBlockInfo(BlockInfo blockInfo) {
-        blockInfoList.add(blockInfo);
-    }
-
-    public List<BlockInfo> getBlockInfoList() {
-        return blockInfoList;
-    }
-
-    public BlockInfo getLastBlockInfo() {
-        return blockInfoList.get(blockInfoList.size()-1);
+        fileInfoAR.updateAndGet(fileInfo -> {
+            fileInfo.blockInfoList.add(blockInfo);
+            return fileInfo;
+        });
     }
 
     public BlockInfo getBlockInfo(int i) {
-        return blockInfoList.get(i);
+        return fileInfoAR.get().blockInfoList.get(i);
     }
 
     public Set<Integer> getBlockNumberSetOfAddress(InetAddress inetAddress) {
         Set<Integer> result = new HashSet<>();
         for (BlockInfo blockInfo :
-                blockInfoList) {
+                fileInfoAR.get().blockInfoList) {
             for (LocatedBlock locatedBlock : blockInfo) {
-                if (locatedBlock.getInetAddress().equals(inetAddress)) {
-                    result.add(locatedBlock.getBlockNumber());
+                if (locatedBlock.getAddress().equals(inetAddress)) {
+                    result.add(locatedBlock.getId());
                 }
             }
         }
         return result;
     }
 
-    public void setBlockInfoByIndex( int index, BlockInfo blockInfo) {
-        blockInfoList.set(index, blockInfo);
+    public void setBlockInfoByIndex(int index, BlockInfo blockInfo) {
+        fileInfoAR.updateAndGet(fileInfo -> {
+            fileInfo.blockInfoList.set(index, blockInfo);
+            return fileInfo;
+        });
     }
 
     public void removeLastBlockInfo() {
-        blockInfoList.remove(blockInfoList.size() - 1);
+        fileInfoAR.updateAndGet(fileInfo -> {
+            fileInfo.blockInfoList.remove(fileInfo.blockInfoList.size()-1);
+            return fileInfo;
+        });
     }
 
     public long getFileSize() {
-        return fileSize;
+        return fileInfoAR.get().fileSize;
     }
 
     public void setFileSize(long fileSize) {
-        this.fileSize = fileSize;
+        fileInfoAR.updateAndGet(fileInfo -> {
+            fileInfo.fileSize = fileSize;
+            return fileInfo;
+        });
     }
 
     public int getBlockAmount() {
-        return blockInfoList.size();
+        return fileInfoAR.get().blockInfoList.size();
     }
 
     @Override
     public Iterator<BlockInfo> iterator() {
-        return blockInfoList.listIterator();
+        return fileInfoAR.get().blockInfoList.iterator();
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        else return false;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        FileNode that = (FileNode) o;
+        return fileInfoAR.get().blockInfoList.equals(that.fileInfoAR.get().blockInfoList);
     }
 
-    public FileNode deepCopy() {
+    /**
+     * deep copy this file node
+     * it is atomic
+     * @return the copy
+     */
+    public FileNode copy() {
         FileNode fileNode = new FileNode();
-        fileNode.setFileSize(this.fileSize);
-        for (BlockInfo blockInfo :
-                this.blockInfoList) {
-            fileNode.addBlockInfo(blockInfo.deepCopy());
-        }
+        fileNode.fileInfoAR.updateAndGet(fileInfo -> {
+            fileInfo.fileSize = this.getFileSize();
+            for (BlockInfo b :
+                    this) {
+                fileInfo.blockInfoList.add(b.copy());
+            }
+            return fileInfo;
+        });
         return fileNode;
-    }
-
-    public void assimilate(FileNode fileNode) {
-        this.blockInfoList = fileNode.blockInfoList;
-        this.fileSize = fileNode.fileSize;
     }
 
     @Override
     public int hashCode() {
-        return blockInfoList.hashCode();
+        return fileInfoAR.get().blockInfoList.hashCode();
     }
 }
 

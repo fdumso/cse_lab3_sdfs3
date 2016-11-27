@@ -37,7 +37,7 @@ public class BlockInfo implements Serializable, Iterable<LocatedBlock> {
         return locatedBlockList.hashCode();
     }
 
-    public BlockInfo deepCopy() {
+    public BlockInfo copy() {
         BlockInfo blockInfo = new BlockInfo();
         for (LocatedBlock locatedBlock :
                 locatedBlockList) {

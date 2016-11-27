@@ -1,26 +1,27 @@
 package sdfs.filetree;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 
 public class DirNode extends Node implements Serializable, Iterable<Entry> {
     private static final long serialVersionUID = 8178778592344231767L;
-    private final Set<Entry> entries = new HashSet<>();
+    private final AtomicReference<HashSet<Entry>> entries = new AtomicReference<>();
 
     public DirNode() {
         super(Type.DIR);
+        entries.set(new HashSet<>());
     }
 
-    @Override
     public Iterator<Entry> iterator() {
-        return entries.iterator();
+        return entries.get().iterator();
     }
 
     public Entry findEntry(String name) {
         for (Entry e:
-             entries) {
+             entries.get()) {
             if (e.getName().equals(name)) {
                 return e;
             }
@@ -28,12 +29,12 @@ public class DirNode extends Node implements Serializable, Iterable<Entry> {
         return null;
     }
 
-    public boolean addEntry(Entry entry) {
-        return entries.add(entry);
-    }
-
-    public boolean removeEntry(Entry entry) {
-        return entries.remove(entry);
+    public DirNode addEntry(Entry entry) {
+        entries.updateAndGet(entries -> {
+            entries.add(entry);
+            return entries;
+        });
+        return this;
     }
 
     @Override

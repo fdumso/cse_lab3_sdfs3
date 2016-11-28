@@ -1,6 +1,6 @@
 package sdfs.datanode;
 
-import sdfs.namenode.AccessTokenPermission;
+import sdfs.entity.AccessTokenPermission;
 import sdfs.packet.NameNodeRequest;
 import sdfs.packet.NameNodeResponse;
 import sdfs.protocol.INameNodeDataNodeProtocol;

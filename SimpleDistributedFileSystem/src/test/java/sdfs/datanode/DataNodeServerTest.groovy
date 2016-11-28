@@ -136,7 +136,7 @@ class DataNodeServerTest extends Specification {
         thrown(IllegalAccessTokenException)
     }
 
-    // ！！copy on write是在客户端实现时才需要这个测试！！
+    // ！！open on write是在客户端实现时才需要这个测试！！
     // 在服务端实现的可以注释掉这部分测试
     def "Client level copy on write"() {
         def accessToken = nameNode.create(filename).token

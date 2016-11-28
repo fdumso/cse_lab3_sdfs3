@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.net.InetAddress;
 
 public class LocatedBlock implements Serializable {
-    private static final long serialVersionUID = -6509598325324530684L;
     private final InetAddress address;
     private final int port;
     private final int id;
@@ -14,8 +13,8 @@ public class LocatedBlock implements Serializable {
             throw new NullPointerException();
         }
         this.address = address;
-        this.port = port;
         this.id = id;
+        this.port = port;
     }
 
     public InetAddress getAddress() {
@@ -47,7 +46,7 @@ public class LocatedBlock implements Serializable {
         return result;
     }
 
-    LocatedBlock deepCopy() {
+    LocatedBlock copy() {
         return new LocatedBlock(this.address, this.port, this.id);
     }
 }

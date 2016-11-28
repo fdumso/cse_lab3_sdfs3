@@ -10,9 +10,7 @@ import spock.lang.Specification
 import java.nio.ByteBuffer
 import java.nio.channels.OverlappingFileLockException
 
-import static sdfs.Util.generateFilename
-import static sdfs.Util.generatePort
-import static sdfs.Util.getBlockAmount
+import static sdfs.Util.*
 
 class SDFSClientTest extends Specification {
     @Shared
@@ -64,7 +62,7 @@ class SDFSClientTest extends Specification {
         then:
         fc.write(dataBuffer) == fileSize
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == fileSize
         fc.write(dataBuffer) == 0
         // 不能同时有两个写锁
@@ -79,7 +77,7 @@ class SDFSClientTest extends Specification {
 
         then:
         readonlyFileChannel.size() == 0
-        readonlyFileChannel.fileNode.blockAmount == getBlockAmount(0)
+        readonlyFileChannel.fileInfo.blockAmount == getBlockAmount(0)
         readonlyFileChannel.position() == 0
         // 即使之前channel关闭，之前打开的channel读到的依旧是旧文件
         when:
@@ -87,7 +85,7 @@ class SDFSClientTest extends Specification {
 
         then:
         readonlyFileChannel.size() == 0
-        readonlyFileChannel.fileNode.blockAmount == getBlockAmount(0)
+        readonlyFileChannel.fileInfo.blockAmount == getBlockAmount(0)
         readonlyFileChannel.position() == 0
         // 之前的可读写channel关闭后，新打开的channel可以读到新的内容
         when:
@@ -96,7 +94,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == 0
         fc.read(buffer) == fileSize
         buffer == dataBuffer
@@ -113,7 +111,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == 0
         fc.read(buffer) == fileSize
         buffer == dataBuffer
@@ -136,7 +134,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == 0
         fc.read(buffer) == fileSize
         buffer == dataBuffer
@@ -154,7 +152,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == 0
-        fc.fileNode.blockAmount == 0
+        fc.fileInfo.blockAmount == 0
         fc.position() == 0
         fc.read(buffer) == -1
         // 新开一个只读channel，由于打开时上面的channel未关闭，所以依旧读到旧的内容
@@ -163,7 +161,7 @@ class SDFSClientTest extends Specification {
 
         then:
         readonlyFileChannel.size() == fileSize
-        readonlyFileChannel.fileNode.blockAmount == getBlockAmount(fileSize)
+        readonlyFileChannel.fileInfo.blockAmount == getBlockAmount(fileSize)
         readonlyFileChannel.position() == 0
         // 及时这时候可读写channel关闭，只读channel依旧读到的是旧的内容
         when:
@@ -171,7 +169,7 @@ class SDFSClientTest extends Specification {
 
         then:
         readonlyFileChannel.size() == fileSize
-        readonlyFileChannel.fileNode.blockAmount == getBlockAmount(fileSize)
+        readonlyFileChannel.fileInfo.blockAmount == getBlockAmount(fileSize)
         readonlyFileChannel.position() == 0
         // 之后新开的channel将会读到新的内容
         when:
@@ -180,7 +178,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == 0
-        fc.fileNode.blockAmount == 0
+        fc.fileInfo.blockAmount == 0
         fc.position() == 0
         fc.read(buffer) == -1
         fc.write(dataBuffer) == fileSize
@@ -205,7 +203,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == 0
         fc.read(buffer) == fileSize
         buffer == dataBuffer
@@ -216,7 +214,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == secondPosition
         fc.read(buffer) == -1
         fc.write(dataBuffer) == 0
@@ -227,7 +225,7 @@ class SDFSClientTest extends Specification {
         then:
         fc.write(dataBuffer) == fileSize
         fc.size() == secondPosition + fileSize
-        fc.fileNode.blockAmount == getBlockAmount(secondPosition + fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(secondPosition + fileSize)
         fc.position() == secondPosition + fileSize
         fc.read(buffer) == -1
         // 将pos置回0，此时文件大小为secondPosition+fileSize
@@ -241,7 +239,7 @@ class SDFSClientTest extends Specification {
         buffer == dataBuffer
         fc.read(buffer) == 0
         fc.size() == secondPosition + fileSize
-        fc.fileNode.blockAmount == getBlockAmount(secondPosition + fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(secondPosition + fileSize)
         fc.position() == fileSize
         // 截断的参数超过文件大小，不产生任何效果
         when:
@@ -249,7 +247,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == secondPosition + fileSize
-        fc.fileNode.blockAmount == getBlockAmount(secondPosition + fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(secondPosition + fileSize)
         fc.position() == fileSize
         // 从fileSize位置开始，读取buffer大小的
         when:
@@ -276,7 +274,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == fileSize
         // 关闭文件，重新打开一个只读channel，此时文件大小应该变回fileSize
         when:
@@ -286,7 +284,7 @@ class SDFSClientTest extends Specification {
 
         then:
         fc.size() == fileSize
-        fc.fileNode.blockAmount == getBlockAmount(fileSize)
+        fc.fileInfo.blockAmount == getBlockAmount(fileSize)
         fc.position() == 0
         fc.read(buffer) == fileSize
         buffer == dataBuffer

@@ -73,14 +73,14 @@ class LogTest extends Specification {
         thrown(SDFSFileAlreadyExistsException)
 
         when:
-        def fileNode = nameNode3.openReadonly("$parentDir/$filename").fileNode
+        def fileNode = nameNode3.openReadonly("$parentDir/$filename").fileInfo
 
         then:
         fileNode.fileSize == 1
         fileNode.blockInfoList[0][0] == locatedBlock
 
         when:
-        def fileNode2 = nameNode3.openReadonly("$parentDir/$filename2").fileNode
+        def fileNode2 = nameNode3.openReadonly("$parentDir/$filename2").fileInfo
 
         then:
         fileNode2.fileSize == IDataNodeProtocol.BLOCK_SIZE * 2
@@ -100,14 +100,14 @@ class LogTest extends Specification {
         thrown(SDFSFileAlreadyExistsException)
 
         when:
-        def fileNode3 = nameNode4.openReadonly("$parentDir/$filename").fileNode
+        def fileNode3 = nameNode4.openReadonly("$parentDir/$filename").fileInfo
 
         then:
         fileNode3.fileSize == 1
         fileNode3.blockInfoList[0][0] == locatedBlock
 
         when:
-        def fileNode4 = nameNode4.openReadonly("$parentDir/$filename2").fileNode
+        def fileNode4 = nameNode4.openReadonly("$parentDir/$filename2").fileInfo
 
         then:
         fileNode4.fileSize == IDataNodeProtocol.BLOCK_SIZE * 2

@@ -1,6 +1,6 @@
 package sdfs.protocol;
 
-import sdfs.namenode.AccessTokenPermission;
+import sdfs.entity.AccessTokenPermission;
 
 import java.net.InetAddress;
 import java.util.UUID;

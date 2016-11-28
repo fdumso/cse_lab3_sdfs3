@@ -1,23 +1,23 @@
 package sdfs.client;
 
 import sdfs.datanode.DataNode;
+import sdfs.entity.FileInfo;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.filetree.BlockInfo;
-import sdfs.filetree.FileNode;
 import sdfs.filetree.LocatedBlock;
 
 import java.util.UUID;
 
 class CacheSystem {
     private UUID token;
-    private FileNode fileNode;
+    private FileInfo fileInfo;
     private int cacheSize;
     private CachedBlock[] cachedBlockList;
     private int pointer;
 
-    CacheSystem(UUID token, FileNode fileNode, int cacheSize) {
+    CacheSystem(UUID token, FileInfo fileInfo, int cacheSize) {
         this.token = token;
-        this.fileNode = fileNode;
+        this.fileInfo = fileInfo;
         this.cacheSize = cacheSize;
         this.cachedBlockList = new CachedBlock[cacheSize];
         this.pointer = 0;
@@ -140,7 +140,7 @@ class CacheSystem {
     }
 
     private void readFromServer(int blockNumber) throws IllegalArgumentException, IllegalAccessTokenException {
-        BlockInfo blockInfo = fileNode.getBlockInfo(blockNumber);
+        BlockInfo blockInfo = fileInfo.getBlockInfo(blockNumber);
         LocatedBlock locatedBlock = blockInfo.iterator().next();
         DataNodeStub dataNodeStub = new DataNodeStub(locatedBlock.getAddress(), locatedBlock.getPort());
         byte[] data = dataNodeStub.read(token, locatedBlock.getId(), 0, DataNode.BLOCK_SIZE);

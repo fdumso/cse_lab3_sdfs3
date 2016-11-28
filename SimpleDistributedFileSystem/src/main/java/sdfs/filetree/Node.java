@@ -1,5 +1,7 @@
 package sdfs.filetree;
 
+import sdfs.namenode.DataBlockManager;
+
 import java.io.Serializable;
 
 public abstract class Node implements Serializable {
@@ -16,5 +18,7 @@ public abstract class Node implements Serializable {
     public Type getType() {
         return type;
     }
+
+    public abstract void recordExistence(DataBlockManager dataBlockManager);
 
 }

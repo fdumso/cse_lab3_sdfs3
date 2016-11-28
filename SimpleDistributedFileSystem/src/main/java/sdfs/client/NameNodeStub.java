@@ -1,9 +1,9 @@
 package sdfs.client;
 
+import sdfs.entity.SDFSFileChannelData;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.LocatedBlock;
-import sdfs.namenode.SDFSFileChannelData;
 import sdfs.packet.NameNodeRequest;
 import sdfs.packet.NameNodeResponse;
 import sdfs.protocol.INameNodeProtocol;

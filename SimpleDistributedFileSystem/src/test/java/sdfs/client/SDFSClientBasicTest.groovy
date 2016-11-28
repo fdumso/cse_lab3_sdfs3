@@ -108,7 +108,7 @@ class SDFSClientBasicTest extends Specification {
 
         then:
         fc.size() == 0
-        fc.fileNode.blockAmount == 0
+        fc.fileInfo.blockAmount == 0
         fc.isOpen()
         fc.position() == 0
         fc.read(ByteBuffer.allocate(1)) == -1
@@ -124,7 +124,7 @@ class SDFSClientBasicTest extends Specification {
 
         then:
         fc.size() == 0
-        fc.fileNode.blockAmount == 0
+        fc.fileInfo.blockAmount == 0
         fc.isOpen()
         fc.position() == 1
         fc.read(ByteBuffer.allocate(1)) == -1
@@ -188,7 +188,7 @@ class SDFSClientBasicTest extends Specification {
 
         then:
         fc.size() == 0
-        fc.fileNode.blockAmount == 0
+        fc.fileInfo.blockAmount == 0
         fc.isOpen()
         fc.position() == 0
         // 只读模式打开的，不可写

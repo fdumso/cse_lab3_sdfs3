@@ -1,7 +1,7 @@
 package sdfs.client;
 
+import sdfs.entity.SDFSFileChannelData;
 import sdfs.exception.SDFSFileAlreadyExistsException;
-import sdfs.namenode.SDFSFileChannelData;
 import sdfs.protocol.SDFSConfiguration;
 
 import java.io.FileNotFoundException;

@@ -1,7 +1,7 @@
 package sdfs.datanode;
 
+import sdfs.entity.AccessTokenPermission;
 import sdfs.exception.IllegalAccessTokenException;
-import sdfs.namenode.AccessTokenPermission;
 import sdfs.protocol.IDataNodeProtocol;
 
 import java.io.*;

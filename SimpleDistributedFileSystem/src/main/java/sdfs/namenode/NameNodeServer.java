@@ -1,5 +1,7 @@
 package sdfs.namenode;
 
+import sdfs.entity.AccessTokenPermission;
+import sdfs.entity.SDFSFileChannelData;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.LocatedBlock;

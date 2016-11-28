@@ -1,4 +1,4 @@
-package sdfs.namenode;
+package sdfs.entity;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -8,7 +8,7 @@ public class AccessTokenPermission implements Serializable {
     private boolean writable;
     private Set<Integer> allowedBlocks;
 
-    AccessTokenPermission(boolean writable, Set<Integer> allowBlocks) {
+    public AccessTokenPermission(boolean writable, Set<Integer> allowBlocks) {
         this.writable = writable;
         this.allowedBlocks = allowBlocks;
     }

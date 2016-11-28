@@ -2,7 +2,6 @@ package sdfs
 
 import org.apache.commons.lang3.RandomStringUtils
 import sdfs.datanode.DataNode
-import sdfs.protocol.IDataNodeProtocol
 
 class Util {
     static def random = new Random()

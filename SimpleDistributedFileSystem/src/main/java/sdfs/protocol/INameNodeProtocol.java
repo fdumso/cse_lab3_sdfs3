@@ -1,9 +1,9 @@
 package sdfs.protocol;
 
+import sdfs.entity.SDFSFileChannelData;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.LocatedBlock;
-import sdfs.namenode.SDFSFileChannelData;
 
 import java.io.FileNotFoundException;
 import java.nio.channels.OverlappingFileLockException;
@@ -91,11 +91,11 @@ public interface INameNodeProtocol {
     void removeLastBlocks(UUID fileAccessToken, int blockAmount) throws IllegalAccessTokenException, IndexOutOfBoundsException;
 
     /**
-     * Request a new copy on write block in order to prevent destroy the original block
+     * Request a new open on write block in order to prevent destroy the original block
      *
-     * @param fileBlockNumber the block number in the file that require copy on write
-     * @return a locatedBlock than could be used as copy on write block
-     * @throws IllegalStateException if there is already copy on write on this file block
+     * @param fileBlockNumber the block number in the file that require open on write
+     * @return a locatedBlock than could be used as open on write block
+     * @throws IllegalStateException if there is already open on write on this file block
      */
     LocatedBlock newCopyOnWriteBlock(UUID fileAccessToken, int fileBlockNumber) throws IllegalAccessTokenException, IndexOutOfBoundsException;
 }

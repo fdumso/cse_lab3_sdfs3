@@ -1,54 +1,102 @@
 package sdfs.filetree;
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.UnaryOperator;
+import sdfs.exception.SDFSFileAlreadyExistsException;
+import sdfs.namenode.DataBlockManager;
+import sdfs.namenode.OpenedFileNode;
+import sdfs.namenode.OpenedFileNodeManager;
 
-public class DirNode extends Node implements Serializable, Iterable<Entry> {
-    private static final long serialVersionUID = 8178778592344231767L;
-    private final AtomicReference<HashSet<Entry>> entries = new AtomicReference<>();
+import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+public class DirNode extends Node implements Serializable {
+    private final Set<Entry> entries = new HashSet<>();
+
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public DirNode() {
         super(Type.DIR);
-        entries.set(new HashSet<>());
     }
 
-    public Iterator<Entry> iterator() {
-        return entries.get().iterator();
+    @Override
+    public void recordExistence(DataBlockManager dataBlockManager) {
+        lock.readLock().lock();
+        for (Entry entry : entries) {
+            Node node = entry.getNode();
+            node.recordExistence(dataBlockManager);
+        }
+        lock.readLock().unlock();
     }
 
+    /**
+     * find the entry with the name
+     * use read lock to make sure it is atomic
+     * @param name the name of the entry to find
+     * @return the entry found, return null if not found
+     */
     public Entry findEntry(String name) {
-        for (Entry e:
-             entries.get()) {
+        lock.readLock().lock();
+        for (Entry e : entries) {
             if (e.getName().equals(name)) {
+                lock.readLock().unlock();
                 return e;
             }
         }
+        lock.readLock().unlock();
         return null;
     }
 
-    public DirNode addEntry(Entry entry) {
-        entries.updateAndGet(entries -> {
-            entries.add(entry);
-            return entries;
-        });
-        return this;
+
+    /**
+     * create a new file under this directory and open it
+     * first check if there is already a entry with the same filename in this directory
+     * use wite lock to make it atomic
+     * @param fileName the file name of the newly created file
+     * @return the file node created, return null if file already exists
+     * @throws SDFSFileAlreadyExistsException if name already exists
+     */
+    public OpenedFileNode createFile(String fileName, UUID token, OpenedFileNodeManager openedFileNodeManager) throws SDFSFileAlreadyExistsException {
+        lock.writeLock().lock();
+        // check if there is already an entry with the same name in this directory
+        // if there is, return null to acknowledge its caller
+        for (Entry e : entries) {
+            if (e.getName().equals(fileName)) {
+                lock.writeLock().unlock();
+                throw new SDFSFileAlreadyExistsException();
+            }
+        }
+        // else create a new empty file node
+        FileNode fileNode = new FileNode();
+        // add it to this directory
+        Entry newEntry = new Entry(fileName, fileNode);
+        entries.add(newEntry);
+        // open it
+        OpenedFileNode writingNode = openedFileNodeManager.openWrite(fileNode, token);
+        lock.writeLock().unlock();
+        return writingNode;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        DirNode entries1 = (DirNode) o;
-
-        return entries.equals(entries1.entries);
-    }
-
-    @Override
-    public int hashCode() {
-        return entries.hashCode();
+    /**
+     * create a directory under this directory
+     * @param dirName the dir name to be created
+     * @throws SDFSFileAlreadyExistsException if name already exists
+     */
+    public void createDir(String dirName) throws SDFSFileAlreadyExistsException {
+        lock.writeLock().lock();
+        // check if there is already an entry with the same name in this directory
+        // if there is, return null to acknowledge its caller
+        for (Entry e : entries) {
+            if (e.getName().equals(dirName)) {
+                lock.writeLock().unlock();
+                throw new SDFSFileAlreadyExistsException();
+            }
+        }
+        // else create a new dir
+        DirNode newDirNode = new DirNode();
+        Entry newEntry = new Entry(dirName, newDirNode);
+        entries.add(newEntry);
+        lock.writeLock().unlock();
     }
 }

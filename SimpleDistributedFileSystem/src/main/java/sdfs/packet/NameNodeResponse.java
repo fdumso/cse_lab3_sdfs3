@@ -1,10 +1,10 @@
 package sdfs.packet;
 
+import sdfs.entity.AccessTokenPermission;
+import sdfs.entity.SDFSFileChannelData;
 import sdfs.exception.IllegalAccessTokenException;
 import sdfs.exception.SDFSFileAlreadyExistsException;
 import sdfs.filetree.LocatedBlock;
-import sdfs.namenode.AccessTokenPermission;
-import sdfs.namenode.SDFSFileChannelData;
 
 import java.io.FileNotFoundException;
 import java.io.Serializable;

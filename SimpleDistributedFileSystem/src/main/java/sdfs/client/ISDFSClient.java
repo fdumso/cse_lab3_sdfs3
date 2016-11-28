@@ -9,7 +9,7 @@ public interface ISDFSClient {
      * Open a readonly file that is already exist.
      *
      * @param fileUri The file uri to be open. The fileUri should look like /foo/bar.data which is a request to sdfs://[ip]:[port]/foo/bar.data
-     * @return File channel of this file
+     * @return FileInfo channel of this file
      * @throws FileNotFoundException if the file is not exist
      */
     SDFSFileChannel openReadonly(String fileUri) throws FileNotFoundException;
@@ -27,7 +27,7 @@ public interface ISDFSClient {
      * Create a empty file and return the output stream to this file.
      *
      * @param fileUri The file uri to be create. The fileUri should look like /foo/bar.data which is a request to sdfs://[ip]:[port]/foo/bar.data
-     * @return File channel of this file
+     * @return FileInfo channel of this file
      * @throws SDFSFileAlreadyExistsException if the file is already exist
      */
     SDFSFileChannel create(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException;

@@ -1,6 +1,4 @@
-package sdfs.namenode;
-
-import sdfs.filetree.FileNode;
+package sdfs.entity;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -9,12 +7,12 @@ public class SDFSFileChannelData implements Serializable {
     private static final long serialVersionUID = 5725498307666004432L;
 
     private UUID token;
-    private FileNode fileNode;
+    private FileInfo fileInfo;
     private boolean writable;
 
-    SDFSFileChannelData(FileNode fileNode, boolean writable, UUID token) {
+    public SDFSFileChannelData(FileInfo fileInfo, boolean writable, UUID token) {
         this.token = token;
-        this.fileNode = fileNode;
+        this.fileInfo = fileInfo;
         this.writable = writable;
     }
 
@@ -26,7 +24,7 @@ public class SDFSFileChannelData implements Serializable {
         return writable;
     }
 
-    public FileNode getFileNode() {
-        return fileNode;
+    public FileInfo getFileInfo() {
+        return fileInfo;
     }
 }

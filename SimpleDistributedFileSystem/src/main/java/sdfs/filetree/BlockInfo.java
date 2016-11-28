@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 
 public class BlockInfo implements Serializable, Iterable<LocatedBlock> {
-    private static final long serialVersionUID = 8712105981933359634L;
     private final List<LocatedBlock> locatedBlockList = new ArrayList<>();
 
     @Override
@@ -16,10 +15,6 @@ public class BlockInfo implements Serializable, Iterable<LocatedBlock> {
 
     public boolean addLocatedBlock(LocatedBlock locatedBlock) {
         return locatedBlockList.add(locatedBlock);
-    }
-
-    public boolean removeLocatedBlock(LocatedBlock locatedBlock) {
-        return locatedBlockList.remove(locatedBlock);
     }
 
     @Override
@@ -41,7 +36,7 @@ public class BlockInfo implements Serializable, Iterable<LocatedBlock> {
         BlockInfo blockInfo = new BlockInfo();
         for (LocatedBlock locatedBlock :
                 locatedBlockList) {
-            blockInfo.addLocatedBlock(locatedBlock.deepCopy());
+            blockInfo.addLocatedBlock(locatedBlock.copy());
         }
         return blockInfo;
     }

@@ -347,35 +347,35 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         }
     }
 
-    public void redoOpenReadonly(String fileUri, UUID token) throws FileNotFoundException {
+    void redoOpenReadonly(String fileUri, UUID token) throws FileNotFoundException {
         FileNode fileNode = locateFile(fileUri);
         openedFileNodeManager.openRead(fileNode, token);
     }
 
-    public void redoOpenReadwrite(String fileUri, UUID token) throws FileNotFoundException, OverlappingFileLockException {
+    void redoOpenReadwrite(String fileUri, UUID token) throws FileNotFoundException, OverlappingFileLockException {
         FileNode fileNode = locateFile(fileUri);
         openedFileNodeManager.openWrite(fileNode, token);
     }
 
-    public void redoAddBlocks(UUID token, List<Integer> newBlockNumberList) {
+    void redoAddBlocks(UUID token, List<Integer> newBlockNumberList) {
         OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
-        for (int i = 0; i < newBlockNumberList.size(); i++) {
+        for (Integer aNewBlockNumberList : newBlockNumberList) {
             BlockInfo blockInfo = new BlockInfo();
-            LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), newBlockNumberList.get(i));
+            LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), aNewBlockNumberList);
             blockInfo.addLocatedBlock(locatedBlock);
             dataBlockManager.recordExistence(locatedBlock);
             openedFileNode.getFileInfo().addBlockInfo(blockInfo);
         }
     }
 
-    public void redoRemoveBlocks(UUID token, int blockAmount) {
+    void redoRemoveBlocks(UUID token, int blockAmount) {
         OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
         for (int i = 0; i < blockAmount; i++) {
             openedFileNode.getFileInfo().removeLastBlockInfo();
         }
     }
 
-    public void redoNewCopyOnWriteBlock(UUID token, int fileBlockNumber, int newBlockNumber) {
+    void redoNewCopyOnWriteBlock(UUID token, int fileBlockNumber, int newBlockNumber) {
         OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
         BlockInfo blockInfo = new BlockInfo();
         LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), newBlockNumber);
@@ -383,23 +383,23 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         openedFileNode.getFileInfo().setBlockInfoByIndex(fileBlockNumber, blockInfo);
     }
 
-    public void redoCreate(String fileUri, UUID token) throws FileNotFoundException, SDFSFileAlreadyExistsException {
+    void redoCreate(String fileUri, UUID token) throws FileNotFoundException, SDFSFileAlreadyExistsException {
         String fileName = fileUri.substring(fileUri.lastIndexOf('/')+1);
         DirNode dirNode = locateDir(fileUri);
         dirNode.createFile(fileName, token, openedFileNodeManager);
     }
 
-    public void redoMkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
+    void redoMkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
         String dirName = fileUri.substring(fileUri.lastIndexOf('/')+1);
         DirNode dirNode = locateDir(fileUri);
         dirNode.createDir(dirName);
     }
 
-    public void redoCloseReadonly(UUID token) throws IllegalAccessTokenException {
+    void redoCloseReadonly(UUID token) throws IllegalAccessTokenException {
         openedFileNodeManager.closeRead(token);
     }
 
-    public void redoCloseReadwrite(UUID token, long newFileSize) throws IllegalAccessTokenException, IllegalArgumentException {
+    void redoCloseReadwrite(UUID token, long newFileSize) throws IllegalAccessTokenException, IllegalArgumentException {
         openedFileNodeManager.closeWrite(token, newFileSize);
     }
 }

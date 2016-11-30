@@ -6,24 +6,19 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class DiskFlusher implements Runnable {
     private DirNode rootNode;
-    private String fileTreePath;
     private long internalSeconds;
     private Logger logger;
+    private File file;
 
-    public DiskFlusher(DirNode rootNode, Logger logger, String fileTreePath, long internalSeconds) {
+    DiskFlusher(DirNode rootNode, Logger logger, String fileTreePath, long internalSeconds) {
         this.rootNode = rootNode;
         this.logger = logger;
-        this.fileTreePath = fileTreePath;
         this.internalSeconds = internalSeconds;
-    }
-
-
-    @Override
-    public void run() {
-        File file = new File(fileTreePath);
+        file = new File(fileTreePath);
         if (!file.exists()) {
             try {
                 file.createNewFile();
@@ -31,6 +26,12 @@ public class DiskFlusher implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+
+    @Override
+    public void run() {
+
         try {
             while (true) {
                 FileOutputStream fileOutputStream = new FileOutputStream(file, false);

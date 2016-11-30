@@ -6,6 +6,7 @@ import sdfs.filetree.LocatedBlock;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -22,7 +23,7 @@ public class DataBlockManager {
     // then all the blocks of such file would -1 reference
     private Map<Integer, Integer> id2RefCount = new HashMap<>();
 
-    private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private ReentrantLock lock = new ReentrantLock();
 
     DataBlockManager(DirNode root) {
         root.recordExistence(this);
@@ -30,13 +31,13 @@ public class DataBlockManager {
 
     public void recordExistence(LocatedBlock locatedBlock) {
         int blockID = locatedBlock.getId();
-        lock.writeLock().lock();
+        lock.lock();
         id2RefCount.putIfAbsent(blockID, 1);
-        lock.writeLock().unlock();
+        lock.unlock();
     }
 
     public void recordOpen(Iterable<BlockInfo> blockInfoIterable) {
-        lock.writeLock().lock();
+        lock.lock();
         for (BlockInfo blockInfo : blockInfoIterable) {
             for (LocatedBlock locatedBlock : blockInfo) {
                 int blockID = locatedBlock.getId();
@@ -48,11 +49,11 @@ public class DataBlockManager {
                 }
             }
         }
-        lock.writeLock().unlock();
+        lock.unlock();
     }
 
     public void recordClose(Iterable<BlockInfo> blockInfoIterable) {
-        lock.writeLock().lock();
+        lock.lock();
         for (BlockInfo blockInfo : blockInfoIterable) {
             for (LocatedBlock locatedBlock : blockInfo) {
                 int blockID = locatedBlock.getId();
@@ -66,20 +67,20 @@ public class DataBlockManager {
                 }
             }
         }
-        lock.writeLock().unlock();
+        lock.unlock();
     }
 
-    public int getNextBlockNumber() {
+    int getNextBlockNumber() {
         int index = 0;
-        lock.writeLock().lock();
+        lock.lock();
         while (true) {
             if (!id2RefCount.containsKey(index)) {
                 id2RefCount.put(index, 1);
-                lock.writeLock().unlock();
+                lock.unlock();
                 return index;
             } else if (id2RefCount.get(index) == 0) {
                 id2RefCount.replace(index,1);
-                lock.writeLock().unlock();
+                lock.unlock();
                 return index;
             }
             index++;

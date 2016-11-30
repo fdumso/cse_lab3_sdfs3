@@ -6,7 +6,7 @@ public class Entry implements Serializable {
     private final Node node;
     private String name;
 
-    public Entry(String name, Node node) {
+    Entry(String name, Node node) {
         if (name == null || node == null) {
             throw new NullPointerException();
         }

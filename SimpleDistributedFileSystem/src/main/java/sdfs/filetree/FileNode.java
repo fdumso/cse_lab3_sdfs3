@@ -17,7 +17,7 @@ public class FileNode extends Node implements Serializable {
 
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public FileNode() {
+    FileNode() {
         super(Type.FILE);
     }
 

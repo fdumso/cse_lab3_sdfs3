@@ -24,7 +24,7 @@ public class OpenedFileNodeManager {
 
     private DataBlockManager dataBlockManager;
 
-    public OpenedFileNodeManager(DataBlockManager dataBlockManager) {
+    OpenedFileNodeManager(DataBlockManager dataBlockManager) {
         this.dataBlockManager = dataBlockManager;
     }
 

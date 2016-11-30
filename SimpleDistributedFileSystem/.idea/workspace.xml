@@ -2,20 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5b3c62c1-0d0e-410d-8fef-c6d690a37497" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/datanode/DataNodeServer$ClientHandler.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/datanode/DataNodeServer$ClientHandler.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/CopyOnWriteBlockLog.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/CopyOnWriteBlockLog.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/CreateFileLog.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/CreateFileLog.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/Log.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/Log.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/MkdirLog.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/MkdirLog.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/RemoveBlocksLog.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/log/RemoveBlocksLog.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../14302010037_Document.docx" afterPath="$PROJECT_DIR$/../14302010037_Document.docx" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/filetree/BlockInfo.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/filetree/BlockInfo.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/filetree/Entry.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/filetree/Entry.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/filetree/FileNode.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/filetree/FileNode.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/NameNode.class" afterPath="$PROJECT_DIR$/build/classes/main/sdfs/namenode/NameNode.class" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/filetree/BlockInfo.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/filetree/BlockInfo.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/filetree/Entry.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/filetree/Entry.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/filetree/FileNode.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/filetree/FileNode.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/namenode/DataBlockManager.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/namenode/DataBlockManager.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/namenode/DiskFlusher.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/namenode/DiskFlusher.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/namenode/NameNode.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/namenode/NameNode.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/sdfs/namenode/OpenedFileNodeManager.java" afterPath="$PROJECT_DIR$/src/main/java/sdfs/namenode/OpenedFileNodeManager.java" />
     </list>
     <ignored path="$PROJECT_DIR$/.gradle/" />
     <ignored path="$PROJECT_DIR$/build/" />
@@ -65,8 +57,8 @@
       <file leaf-file-name="LogTest.groovy" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/test/java/sdfs/namenode/LogTest.groovy">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="551">
-              <caret line="46" column="78" lean-forward="false" selection-start-line="46" selection-start-column="78" selection-end-line="46" selection-end-column="78" />
+            <state relative-caret-position="133">
+              <caret line="74" column="0" lean-forward="true" selection-start-line="74" selection-start-column="0" selection-end-line="74" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -1588,7 +1580,7 @@
       <workItem from="1480266055286" duration="12703000" />
       <workItem from="1480309072798" duration="12441000" />
       <workItem from="1480364312655" duration="4401000" />
-      <workItem from="1480451198731" duration="38977000" />
+      <workItem from="1480451198731" duration="39681000" />
     </task>
     <task id="LOCAL-00001" summary="q">
       <created>1480235503760</created>
@@ -1611,7 +1603,14 @@
       <option name="project" value="LOCAL" />
       <updated>1480498536592</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="fix bugs">
+      <created>1480548316559</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1480548316559</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TestHistory">
@@ -1647,7 +1646,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="120603000" />
+    <option name="totallyTimeSpent" value="121307000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="62" y="0" width="1304" height="768" extended-state="0" />
@@ -1663,7 +1662,7 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32872504" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.4488189" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.17165354" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Properties" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -1694,7 +1693,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="q" />
     <MESSAGE value="done" />
-    <option name="LAST_COMMIT_MESSAGE" value="done" />
+    <MESSAGE value="fix bugs" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix bugs" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -2177,8 +2177,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/test/java/sdfs/namenode/LogTest.groovy">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="551">
-          <caret line="46" column="78" lean-forward="false" selection-start-line="46" selection-start-column="78" selection-end-line="46" selection-end-column="78" />
+        <state relative-caret-position="133">
+          <caret line="74" column="0" lean-forward="true" selection-start-line="74" selection-start-column="0" selection-end-line="74" selection-end-column="0" />
           <folding />
         </state>
       </provider>

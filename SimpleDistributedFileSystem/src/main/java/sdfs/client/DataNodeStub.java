@@ -17,15 +17,12 @@ import java.net.Socket;
 import java.util.UUID;
 
 public class DataNodeStub implements IDataNodeProtocol {
-    private Socket socketWithServer;
+    private InetAddress address;
+    private int port;
 
     DataNodeStub(InetAddress address, int port) {
-        try {
-            socketWithServer = new Socket(address, port);
-        } catch (IOException e) {
-            System.err.println("Can not connect to DataNode!");
-            e.printStackTrace();
-        }
+        this.address = address;
+        this.port = port;
     }
 
     /**
@@ -35,11 +32,14 @@ public class DataNodeStub implements IDataNodeProtocol {
      */
     private DataNodeResponse sentRequest(DataNodeRequest request) {
         try {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socketWithServer.getOutputStream());
+            Socket socket = new Socket(address, port);
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectOutputStream.writeObject(request);
             objectOutputStream.flush();
-            ObjectInputStream objectInputStream = new ObjectInputStream(socketWithServer.getInputStream());
-            return (DataNodeResponse) objectInputStream.readObject();
+            ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
+            DataNodeResponse dataNodeResponse = (DataNodeResponse) objectInputStream.readObject();
+            socket.close();
+            return dataNodeResponse;
         } catch (IOException e) {
             System.err.println("Socket error!");
             e.printStackTrace();

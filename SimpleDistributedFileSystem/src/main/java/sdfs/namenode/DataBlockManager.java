@@ -5,7 +5,6 @@ import sdfs.filetree.DirNode;
 import sdfs.filetree.LocatedBlock;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -52,20 +51,6 @@ public class DataBlockManager {
         lock.writeLock().unlock();
     }
 
-    public void recordOpen(List<LocatedBlock> result) {
-        lock.writeLock().lock();
-        for (LocatedBlock locatedBlock : result) {
-            int blockID = locatedBlock.getId();
-            if (id2RefCount.containsKey(blockID)) {
-                int oldRefCount = id2RefCount.get(blockID);
-                id2RefCount.replace(blockID, oldRefCount+1);
-            } else {
-                id2RefCount.put(blockID, 1);
-            }
-        }
-        lock.writeLock().unlock();
-    }
-
     public void recordClose(Iterable<BlockInfo> blockInfoIterable) {
         lock.writeLock().lock();
         for (BlockInfo blockInfo : blockInfoIterable) {
@@ -86,8 +71,15 @@ public class DataBlockManager {
 
     public int getNextBlockNumber() {
         int index = 0;
+        lock.writeLock().lock();
         while (true) {
-            if (!id2RefCount.containsKey(index) || id2RefCount.get(index) == 0) {
+            if (!id2RefCount.containsKey(index)) {
+                id2RefCount.put(index, 1);
+                lock.writeLock().unlock();
+                return index;
+            } else if (id2RefCount.get(index) == 0) {
+                id2RefCount.replace(index,1);
+                lock.writeLock().unlock();
                 return index;
             }
             index++;

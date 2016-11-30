@@ -20,20 +20,19 @@ import java.util.UUID;
 
 
 public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
-    private static final String NAME_NODE_DIR = System.getProperty("sdfs.namenode.dir");
-    private static final String FILE_TREE_PATH = NAME_NODE_DIR+"filetree.data";
-    private static final String LOG_PATH = NAME_NODE_DIR+"namenode.log";
+    private final String NAME_NODE_DIR = System.getProperty("sdfs.namenode.dir");
+    private final String FILE_TREE_PATH = NAME_NODE_DIR+"/root.node";
+    private final String LOG_PATH = NAME_NODE_DIR+"/namenode.log";
     private final SDFSConfiguration configuration;
-    private final long flushDiskInternalSeconds;
 
     // components
     private final DataBlockManager dataBlockManager;
     private final OpenedFileNodeManager openedFileNodeManager;
+    private final Logger logger;
 
     private DirNode rootNode;
 
     public NameNode(SDFSConfiguration configuration, long flushDiskInternalSeconds) {
-        this.flushDiskInternalSeconds = flushDiskInternalSeconds;
         this.configuration = configuration;
 
         // read file tree stored on the disk
@@ -52,7 +51,8 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
         // init components
         dataBlockManager = new DataBlockManager(rootNode);
         openedFileNodeManager = new OpenedFileNodeManager(dataBlockManager);
-        DiskFlusher diskFlusher = new DiskFlusher(rootNode, LOG_PATH, flushDiskInternalSeconds);
+        logger = new Logger(LOG_PATH, this);
+        DiskFlusher diskFlusher = new DiskFlusher(rootNode, logger, FILE_TREE_PATH, flushDiskInternalSeconds);
 
         // start flushing to disk
         new Thread(diskFlusher).start();
@@ -121,57 +121,130 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
 
     @Override
     public SDFSFileChannelData openReadonly(String fileUri) throws FileNotFoundException {
-        FileNode fileNode = locateFile(fileUri);
-        UUID token = UUID.randomUUID();
+        // log START
+        int logID = logger.start();
 
-        // open the file node and record its openness
-        OpenedFileNode readingNode = openedFileNodeManager.openRead(fileNode, token);
-
-        return new SDFSFileChannelData(readingNode.getFileInfo(), false, token);
+        try {
+            UUID token = UUID.randomUUID();
+            logger.openRead(logID, fileUri, token);
+            FileNode fileNode = locateFile(fileUri);
+            // open the file node and record its openness
+            OpenedFileNode readingNode = openedFileNodeManager.openRead(fileNode, token);
+            // ready to do
+            logger.commit(logID);
+            return new SDFSFileChannelData(readingNode.getFileInfo(), false, token);
+        } catch (FileNotFoundException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
+        }
     }
 
     @Override
     public SDFSFileChannelData openReadwrite(String fileUri) throws OverlappingFileLockException, FileNotFoundException {
-        FileNode fileNode = locateFile(fileUri);
-        UUID token = UUID.randomUUID();
+        // log START
+        int logID = logger.start();
 
-        OpenedFileNode writingNode = openedFileNodeManager.openWrite(fileNode, token);
+        try {
+            UUID token = UUID.randomUUID();
+            logger.openWrite(logID, fileUri, token);
 
-        return new SDFSFileChannelData(writingNode.getFileInfo(), true, token);
+            FileNode fileNode = locateFile(fileUri);
+            OpenedFileNode writingNode = openedFileNodeManager.openWrite(fileNode, token);
+
+
+            logger.commit(logID);
+            return new SDFSFileChannelData(writingNode.getFileInfo(), true, token);
+        } catch (OverlappingFileLockException | FileNotFoundException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
+        }
+
     }
 
     @Override
     public SDFSFileChannelData create(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
-        if (fileUri.endsWith("/")) {
-            throw new FileNotFoundException();
-        }
-        String fileName = fileUri.substring(fileUri.lastIndexOf('/')+1);
-        DirNode dirNode = locateDir(fileUri);
+        // log START
+        int logID = logger.start();
 
-        UUID token = UUID.randomUUID();
-        OpenedFileNode openedFileNode = dirNode.createFile(fileName, token, openedFileNodeManager);
-        return new SDFSFileChannelData(openedFileNode.getFileInfo(), true, token);
+        try {
+            UUID token = UUID.randomUUID();
+            logger.create(logID, fileUri, token);
+
+            if (fileUri.endsWith("/")) {
+                throw new FileNotFoundException();
+            }
+            String fileName = fileUri.substring(fileUri.lastIndexOf('/')+1);
+            DirNode dirNode = locateDir(fileUri);
+            OpenedFileNode openedFileNode = dirNode.createFile(fileName, token, openedFileNodeManager);
+
+
+            logger.commit(logID);
+            return new SDFSFileChannelData(openedFileNode.getFileInfo(), true, token);
+        } catch (SDFSFileAlreadyExistsException | FileNotFoundException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
+        }
     }
 
     @Override
     public void mkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
-        if (fileUri.endsWith("/")) {
-            throw new FileNotFoundException();
-        }
-        String dirName = fileUri.substring(fileUri.lastIndexOf('/')+1);
-        DirNode dirNode = locateDir(fileUri);
+        // log START
+        int logID = logger.start();
 
-        dirNode.createDir(dirName);
+        try {
+            logger.mkdir(logID, fileUri);
+
+            if (fileUri.endsWith("/")) {
+                throw new FileNotFoundException();
+            }
+            String dirName = fileUri.substring(fileUri.lastIndexOf('/')+1);
+            DirNode dirNode = locateDir(fileUri);
+            dirNode.createDir(dirName);
+            logger.commit(logID);
+
+        } catch (SDFSFileAlreadyExistsException | FileNotFoundException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
+        }
+
     }
 
     @Override
     public void closeReadonlyFile(UUID token) throws IllegalAccessTokenException {
-        openedFileNodeManager.closeRead(token);
+        // log START
+        int logID = logger.start();
+
+        try {
+            logger.closeRead(logID, token);
+            openedFileNodeManager.closeRead(token);
+            logger.commit(logID);
+
+        } catch (IllegalAccessTokenException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
+        }
     }
 
     @Override
     public void closeReadwriteFile(UUID token, long newFileSize) throws IllegalAccessTokenException, IllegalArgumentException {
-        openedFileNodeManager.closeWrite(token, newFileSize);
+        // log START
+        int logID = logger.start();
+
+        try {
+            logger.closeWrite(logID, token, newFileSize);
+            openedFileNodeManager.closeWrite(token, newFileSize);
+            logger.commit(logID);
+
+        } catch (IllegalAccessTokenException | IllegalArgumentException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
+        }
     }
 
     /*
@@ -179,24 +252,38 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
     we do not need to consider thread safety for this action
      */
     @Override
-    public List<LocatedBlock> addBlocks(UUID token, int blockAmount) throws IllegalAccessTokenException {
-        List<LocatedBlock> newBlockList = new ArrayList<>();
-        if (!openedFileNodeManager.isWriting(token)) {
-            throw new IllegalAccessTokenException();
+    public List<LocatedBlock> addBlocks(UUID token, int blockAmount) throws IllegalAccessTokenException, IllegalArgumentException {
+        // log START
+        int logID = logger.start();
+
+        try {
+            List<Integer> newBlockNumberList = new ArrayList<>();
+            for (int i = 0; i < blockAmount; i++) {
+                newBlockNumberList.add(dataBlockManager.getNextBlockNumber());
+            }
+            logger.addBlocks(logID, token, newBlockNumberList);
+            if (!openedFileNodeManager.isWriting(token)) {
+                throw new IllegalAccessTokenException();
+            }
+            if (blockAmount < 0) {
+                throw new IllegalArgumentException();
+            }
+            List<LocatedBlock> newBlockList = new ArrayList<>();
+            OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
+            for (int i = 0; i < blockAmount; i++) {
+                BlockInfo blockInfo = new BlockInfo();
+                LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), newBlockNumberList.get(i));
+                blockInfo.addLocatedBlock(locatedBlock);
+                openedFileNode.getFileInfo().addBlockInfo(blockInfo);
+                newBlockList.add(locatedBlock);
+            }
+            logger.commit(logID);
+            return newBlockList;
+        } catch (IllegalAccessTokenException | IllegalArgumentException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
         }
-        if (blockAmount < 0) {
-            throw new IllegalArgumentException();
-        }
-        OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
-        for (int i = 0; i < blockAmount; i++) {
-            BlockInfo blockInfo = new BlockInfo();
-            LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), dataBlockManager.getNextBlockNumber());
-            blockInfo.addLocatedBlock(locatedBlock);
-            openedFileNode.getFileInfo().addBlockInfo(blockInfo);
-            newBlockList.add(locatedBlock);
-        }
-        dataBlockManager.recordOpen(newBlockList);
-        return newBlockList;
     }
 
     /*
@@ -205,15 +292,26 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
      */
     @Override
     public void removeLastBlocks(UUID token, int blockAmount) throws IllegalAccessTokenException, IndexOutOfBoundsException {
-        if (!openedFileNodeManager.isWriting(token)) {
-            throw new IllegalAccessTokenException();
-        }
-        if (blockAmount < 0) {
-            throw new IllegalArgumentException();
-        }
-        OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
-        for (int i = 0; i < blockAmount; i++) {
-            openedFileNode.getFileInfo().removeLastBlockInfo();
+        // log START
+        int logID = logger.start();
+
+        try {
+            logger.removeBlocks(logID, token, blockAmount);
+            if (!openedFileNodeManager.isWriting(token)) {
+                throw new IllegalAccessTokenException();
+            }
+            if (blockAmount < 0) {
+                throw new IllegalArgumentException();
+            }
+            OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
+            for (int i = 0; i < blockAmount; i++) {
+                openedFileNode.getFileInfo().removeLastBlockInfo();
+            }
+            logger.commit(logID);
+        } catch (IllegalAccessTokenException | IndexOutOfBoundsException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
         }
     }
 
@@ -223,18 +321,85 @@ public class NameNode implements INameNodeProtocol, INameNodeDataNodeProtocol {
      */
     @Override
     public LocatedBlock newCopyOnWriteBlock(UUID token, int fileBlockNumber) throws IllegalAccessTokenException, IndexOutOfBoundsException {
-        if (!openedFileNodeManager.isWriting(token)) {
-            throw new IllegalAccessTokenException();
+        // log START
+        int logID = logger.start();
+
+        try {
+            int newBlockNumber = dataBlockManager.getNextBlockNumber();
+            logger.copyOnWriteBlock(logID, token, fileBlockNumber, newBlockNumber);
+            if (!openedFileNodeManager.isWriting(token)) {
+                throw new IllegalAccessTokenException();
+            }
+            OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
+            if (fileBlockNumber < 0 || fileBlockNumber >= openedFileNode.getFileInfo().getBlockAmount()) {
+                throw new IndexOutOfBoundsException();
+            }
+            BlockInfo blockInfo = new BlockInfo();
+            LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), newBlockNumber);
+            blockInfo.addLocatedBlock(locatedBlock);
+            openedFileNode.getFileInfo().setBlockInfoByIndex(fileBlockNumber, blockInfo);
+            logger.commit(logID);
+            return locatedBlock;
+        } catch (IllegalAccessTokenException | IndexOutOfBoundsException e) {
+            // log ABORT
+            logger.abort(logID);
+            throw e;
         }
+    }
+
+    public void redoOpenReadonly(String fileUri, UUID token) throws FileNotFoundException {
+        FileNode fileNode = locateFile(fileUri);
+        openedFileNodeManager.openRead(fileNode, token);
+    }
+
+    public void redoOpenReadwrite(String fileUri, UUID token) throws FileNotFoundException, OverlappingFileLockException {
+        FileNode fileNode = locateFile(fileUri);
+        openedFileNodeManager.openWrite(fileNode, token);
+    }
+
+    public void redoAddBlocks(UUID token, List<Integer> newBlockNumberList) {
         OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
-        if (fileBlockNumber < 0 || fileBlockNumber >= openedFileNode.getFileInfo().getBlockAmount()) {
-            throw new IndexOutOfBoundsException();
+        for (int i = 0; i < newBlockNumberList.size(); i++) {
+            BlockInfo blockInfo = new BlockInfo();
+            LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), newBlockNumberList.get(i));
+            blockInfo.addLocatedBlock(locatedBlock);
+            dataBlockManager.recordExistence(locatedBlock);
+            openedFileNode.getFileInfo().addBlockInfo(blockInfo);
         }
+    }
+
+    public void redoRemoveBlocks(UUID token, int blockAmount) {
+        OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
+        for (int i = 0; i < blockAmount; i++) {
+            openedFileNode.getFileInfo().removeLastBlockInfo();
+        }
+    }
+
+    public void redoNewCopyOnWriteBlock(UUID token, int fileBlockNumber, int newBlockNumber) {
+        OpenedFileNode openedFileNode = openedFileNodeManager.getWritingFile(token);
         BlockInfo blockInfo = new BlockInfo();
-        LocatedBlock locatedBlock = null;
-        locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), dataBlockManager.getNextBlockNumber());
+        LocatedBlock locatedBlock = new LocatedBlock(configuration.getDataNodeAddress(), configuration.getDataNodePort(), newBlockNumber);
         blockInfo.addLocatedBlock(locatedBlock);
         openedFileNode.getFileInfo().setBlockInfoByIndex(fileBlockNumber, blockInfo);
-        return locatedBlock;
+    }
+
+    public void redoCreate(String fileUri, UUID token) throws FileNotFoundException, SDFSFileAlreadyExistsException {
+        String fileName = fileUri.substring(fileUri.lastIndexOf('/')+1);
+        DirNode dirNode = locateDir(fileUri);
+        dirNode.createFile(fileName, token, openedFileNodeManager);
+    }
+
+    public void redoMkdir(String fileUri) throws SDFSFileAlreadyExistsException, FileNotFoundException {
+        String dirName = fileUri.substring(fileUri.lastIndexOf('/')+1);
+        DirNode dirNode = locateDir(fileUri);
+        dirNode.createDir(dirName);
+    }
+
+    public void redoCloseReadonly(UUID token) throws IllegalAccessTokenException {
+        openedFileNodeManager.closeRead(token);
+    }
+
+    public void redoCloseReadwrite(UUID token, long newFileSize) throws IllegalAccessTokenException, IllegalArgumentException {
+        openedFileNodeManager.closeWrite(token, newFileSize);
     }
 }

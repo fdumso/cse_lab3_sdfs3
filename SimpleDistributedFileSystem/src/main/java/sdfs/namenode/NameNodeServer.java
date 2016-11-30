@@ -118,7 +118,7 @@ public class NameNodeServer implements Runnable {
                 SDFSFileChannelData sdfsFileChannelData = nameNode.openReadonly(fileUri);
                 response.setSDFSFileChannelData(sdfsFileChannelData);
             } catch (FileNotFoundException e) {
-                response.setFileNotFoundException(new FileNotFoundException());
+                response.setFileNotFoundException(e);
             }
             return response;
         }
@@ -130,9 +130,9 @@ public class NameNodeServer implements Runnable {
                 SDFSFileChannelData sdfsFileChannelData = nameNode.openReadwrite(fileUri);
                 response.setSDFSFileChannelData(sdfsFileChannelData);
             } catch (FileNotFoundException e) {
-                response.setFileNotFoundException(new FileNotFoundException());
+                response.setFileNotFoundException(e);
             } catch (OverlappingFileLockException e) {
-                response.setOverlappingFileLockException(new OverlappingFileLockException());
+                response.setOverlappingFileLockException(e);
             }
             return response;
         }
@@ -144,9 +144,9 @@ public class NameNodeServer implements Runnable {
                 SDFSFileChannelData sdfsFileChannelData = nameNode.create(fileUri);
                 response.setSDFSFileChannelData(sdfsFileChannelData);
             } catch (SDFSFileAlreadyExistsException e) {
-                response.setSDFSFileAlreadyExistException(new SDFSFileAlreadyExistsException());
+                response.setSDFSFileAlreadyExistException(e);
             } catch (FileNotFoundException e) {
-                response.setFileNotFoundException(new FileNotFoundException());
+                response.setFileNotFoundException(e);
             }
             return response;
         }
@@ -157,9 +157,9 @@ public class NameNodeServer implements Runnable {
             try {
                 nameNode.mkdir(fileUri);
             } catch (SDFSFileAlreadyExistsException e) {
-                response.setSDFSFileAlreadyExistException(new SDFSFileAlreadyExistsException());
+                response.setSDFSFileAlreadyExistException(e);
             } catch (FileNotFoundException e) {
-                response.setFileNotFoundException(new FileNotFoundException());
+                response.setFileNotFoundException(e);
             }
             return response;
         }
@@ -170,7 +170,7 @@ public class NameNodeServer implements Runnable {
             try {
                 nameNode.closeReadonlyFile(token);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             }
             return response;
         }
@@ -182,9 +182,9 @@ public class NameNodeServer implements Runnable {
             try {
                 nameNode.closeReadwriteFile(token, newFileSize);
             } catch (IllegalArgumentException e) {
-                response.setIllegalArgumentException(new IllegalArgumentException());
+                response.setIllegalArgumentException(e);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             }
             return response;
         }
@@ -197,7 +197,7 @@ public class NameNodeServer implements Runnable {
                 List<LocatedBlock> blockList = nameNode.addBlocks(token, blockAmount);
                 response.setBlockList(blockList);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             }
             return response;
         }
@@ -209,9 +209,9 @@ public class NameNodeServer implements Runnable {
             try {
                 nameNode.removeLastBlocks(token, blockAmount);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             } catch (IndexOutOfBoundsException e) {
-                response.setIndexOutOfBoundsException(new IndexOutOfBoundsException());
+                response.setIndexOutOfBoundsException(e);
             }
             return response;
         }
@@ -226,9 +226,9 @@ public class NameNodeServer implements Runnable {
                 blockList.add(block);
                 response.setBlockList(blockList);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             } catch (IndexOutOfBoundsException e) {
-                response.setIndexOutOfBoundsException(new IndexOutOfBoundsException());
+                response.setIndexOutOfBoundsException(e);
             }
             return response;
         }

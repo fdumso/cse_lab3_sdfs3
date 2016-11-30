@@ -4,6 +4,8 @@ import sdfs.entity.FileInfo;
 import sdfs.namenode.DataBlockManager;
 import sdfs.namenode.OpenedFileNode;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,12 +29,6 @@ public class FileNode extends Node implements Serializable {
                 dataBlockManager.recordExistence(locatedBlock);
             }
         }
-        lock.readLock().unlock();
-    }
-
-    public void recordOpen(DataBlockManager dataBlockManager) {
-        lock.readLock().lock();
-
         lock.readLock().unlock();
     }
 
@@ -83,6 +79,18 @@ public class FileNode extends Node implements Serializable {
         lock.writeLock().lock();
         dataBlockManager.recordClose(fileInfo.getBlockInfoList());
         lock.writeLock().unlock();
+    }
+
+    /**
+     * override default write object method to lock the file tree
+     * so that no change will made during flushing the disk
+     * @param stream the output stream
+     * @throws IOException io exception
+     */
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        lock.readLock().lock();
+        stream.defaultWriteObject();
+        lock.readLock().unlock();
     }
 }
 

@@ -1,41 +1,29 @@
 package sdfs.namenode.log;
 
-import sdfs.filetree.LocatedBlock;
-
+import java.io.Serializable;
 import java.util.UUID;
 
-public class CopyOnWriteBlockLog implements Log {
+public class CopyOnWriteBlockLog extends Log implements Serializable {
     private UUID token;
     private int fileBlockNumber;
-    private LocatedBlock locatedBlock;
+    private int newBlockNumber;
 
-    public CopyOnWriteBlockLog(UUID token, int fileBlockNumber, LocatedBlock locatedBlock) {
+    public CopyOnWriteBlockLog(int logID, UUID token, int fileBlockNumber, int newBlockNumber) {
+        super(logID, Type.COPY_ON_WRITE_BLOCK);
         this.token = token;
         this.fileBlockNumber = fileBlockNumber;
-        this.locatedBlock = locatedBlock;
+        this.newBlockNumber = newBlockNumber;
     }
 
     public UUID getToken() {
         return token;
     }
 
-    public void setToken(UUID token) {
-        this.token = token;
-    }
-
     public int getFileBlockNumber() {
         return fileBlockNumber;
     }
 
-    public void setFileBlockNumber(int fileBlockNumber) {
-        this.fileBlockNumber = fileBlockNumber;
-    }
-
-    public LocatedBlock getLocatedBlock() {
-        return locatedBlock;
-    }
-
-    public void setLocatedBlock(LocatedBlock locatedBlock) {
-        this.locatedBlock = locatedBlock;
+    public int getNewBlockNumber() {
+        return newBlockNumber;
     }
 }

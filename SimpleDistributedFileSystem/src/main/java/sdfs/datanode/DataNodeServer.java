@@ -88,9 +88,9 @@ public class DataNodeServer implements Runnable {
                 byte[] data = dataNode.read(token, blockNumber, offset, size);
                 response.setData(data);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             } catch (IllegalArgumentException e) {
-                response.setIllegalArgumentException(new IllegalArgumentException());
+                response.setIllegalArgumentException(e);
             }
             return response;
         }
@@ -104,9 +104,9 @@ public class DataNodeServer implements Runnable {
             try {
                 dataNode.write(token, blockNumber, offset, data);
             } catch (IllegalAccessTokenException e) {
-                response.setIllegalAccessTokenException(new IllegalAccessTokenException());
+                response.setIllegalAccessTokenException(e);
             } catch (IllegalArgumentException e) {
-                response.setIllegalArgumentException(new IllegalArgumentException());
+                response.setIllegalArgumentException(e);
             }
             return response;
         }

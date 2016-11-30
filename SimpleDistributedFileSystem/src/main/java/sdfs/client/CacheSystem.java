@@ -8,7 +8,7 @@ import sdfs.filetree.LocatedBlock;
 
 import java.util.UUID;
 
-class CacheSystem {
+public class CacheSystem {
     private UUID token;
     private FileInfo fileInfo;
     private int cacheSize;

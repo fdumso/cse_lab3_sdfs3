@@ -1,12 +1,14 @@
 package sdfs.namenode.log;
 
+import java.io.Serializable;
 import java.util.UUID;
 
-public class WriteCommitLog implements Log {
+public class CloseWriteLog extends Log implements Serializable {
     private UUID token;
     private long newFileSize;
 
-    public WriteCommitLog(UUID token, long newFileSize) {
+    public CloseWriteLog(int logID, UUID token, long newFileSize) {
+        super(logID, Type.CLOSE_WRITE);
         this.token = token;
         this.newFileSize = newFileSize;
     }
@@ -15,15 +17,7 @@ public class WriteCommitLog implements Log {
         return token;
     }
 
-    public void setToken(UUID token) {
-        this.token = token;
-    }
-
     public long getNewFileSize() {
         return newFileSize;
-    }
-
-    public void setNewFileSize(long newFileSize) {
-        this.newFileSize = newFileSize;
     }
 }

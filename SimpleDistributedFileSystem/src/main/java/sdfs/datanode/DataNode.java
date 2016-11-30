@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.util.UUID;
 
 public class DataNode implements IDataNodeProtocol {
-    private static final String FILE_PATH = System.getProperty("sdfs.datanode.dir");
+    private final String FILE_PATH = System.getProperty("sdfs.datanode.dir")+"/";
     public static final int BLOCK_SIZE = 64 * 1024;
 
     private final NameNodeStub nameNodeStub;

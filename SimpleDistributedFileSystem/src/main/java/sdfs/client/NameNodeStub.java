@@ -19,16 +19,12 @@ import java.util.List;
 import java.util.UUID;
 
 public class NameNodeStub implements INameNodeProtocol {
-
-    private Socket socketWithServer;
+    private InetAddress address;
+    private int port;
 
     NameNodeStub(InetAddress address, int port) {
-        try {
-            this.socketWithServer = new Socket(address, port);
-        } catch (IOException e) {
-            System.err.println("Can not connect to NameNode!");
-            e.printStackTrace();
-        }
+        this.address = address;
+        this.port = port;
     }
 
 
@@ -39,11 +35,14 @@ public class NameNodeStub implements INameNodeProtocol {
      */
     private NameNodeResponse sendRequest(NameNodeRequest request) {
         try {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socketWithServer.getOutputStream());
+            Socket socket = new Socket(address, port);
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectOutputStream.writeObject(request);
             objectOutputStream.flush();
-            ObjectInputStream objectInputStream = new ObjectInputStream(socketWithServer.getInputStream());
-            return (NameNodeResponse) objectInputStream.readObject();
+            ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
+            NameNodeResponse nameNodeResponse = (NameNodeResponse) objectInputStream.readObject();
+            socket.close();
+            return nameNodeResponse;
         } catch (IOException e) {
             System.err.println("Socket error!");
             e.printStackTrace();

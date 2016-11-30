@@ -5,6 +5,8 @@ import sdfs.namenode.DataBlockManager;
 import sdfs.namenode.OpenedFileNode;
 import sdfs.namenode.OpenedFileNodeManager;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
@@ -14,7 +16,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DirNode extends Node implements Serializable {
     private final Set<Entry> entries = new HashSet<>();
 
-    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public DirNode() {
         super(Type.DIR);
@@ -98,5 +100,17 @@ public class DirNode extends Node implements Serializable {
         Entry newEntry = new Entry(dirName, newDirNode);
         entries.add(newEntry);
         lock.writeLock().unlock();
+    }
+
+    /**
+     * override default write object method to lock the file tree
+     * so that no change will made during flushing the disk
+     * @param stream the output stream
+     * @throws IOException io exception
+     */
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        lock.readLock().lock();
+        stream.defaultWriteObject();
+        lock.readLock().unlock();
     }
 }

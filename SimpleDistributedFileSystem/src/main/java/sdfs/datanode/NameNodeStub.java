@@ -13,27 +13,26 @@ import java.net.Socket;
 import java.util.UUID;
 
 public class NameNodeStub implements INameNodeDataNodeProtocol {
-    private Socket socketWithNameNode;
+    private InetAddress address;
+    private int port;
 
     NameNodeStub(InetAddress address, int port) {
-        try {
-            this.socketWithNameNode = new Socket(address, port);
-        } catch (IOException e) {
-            System.err.println("Can not connect to NameNode!");
-            e.printStackTrace();
-        }
+        this.address = address;
+        this.port = port;
     }
 
     @Override
-    public AccessTokenPermission getAccessTokenPermission(UUID token, InetAddress address) {
+    public AccessTokenPermission getAccessTokenPermission(UUID token, InetAddress dataNodeAddress) {
         NameNodeRequest request = new NameNodeRequest(NameNodeRequest.Type.GET_ACCESS_TOKEN_PERMISSION, null, token, 0);
         NameNodeResponse response = null;
         try {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socketWithNameNode.getOutputStream());
+            Socket socket = new Socket(this.address, port);
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectOutputStream.writeObject(request);
             objectOutputStream.flush();
-            ObjectInputStream objectInputStream = new ObjectInputStream(socketWithNameNode.getInputStream());
+            ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
             response = (NameNodeResponse) objectInputStream.readObject();
+            socket.close();
         } catch (IOException e) {
             System.err.println("Socket error!");
             e.printStackTrace();

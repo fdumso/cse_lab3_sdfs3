@@ -1,4 +1,2 @@
-handout/
-.idea/
 .DS_Store
-SimpleDistributedFileSystem/.idea
+lab3/SimpleDistributedFileSystem/.idea

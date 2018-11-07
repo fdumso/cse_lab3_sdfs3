@@ -1,2 +1,5 @@
 .DS_Store
 lab3/SimpleDistributedFileSystem/.idea
+lab1/.idea
+.jar
+.class

@@ -1,5 +1,9 @@
 .DS_Store
-lab3/SimpleDistributedFileSystem/.idea
 lab1/.idea
 .jar
 .class
+lab3/SimpleDistributedFileSystem/.idea
+lab3/SimpleDistributedFileSystem/.gradle
+lab3/SimpleDistributedFileSystem/.settings
+lab3/SimpleDistributedFileSystem/bin
+lab3/SimpleDistributedFileSystem/build
